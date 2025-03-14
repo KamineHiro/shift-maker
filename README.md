@@ -1,36 +1,159 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# シフト作成アプリ
 
-## Getting Started
+シフト作成アプリは、グループを作成してURLを共有するだけで、簡単にシフト希望を管理できるツールです。
 
-First, run the development server:
+## 機能
+
+- **グループ作成**: 誰でも新しいグループを作成できます
+- **簡単アクセス**: アクセスキーを共有するだけで、メンバーをグループに招待できます
+- **シフト希望入力**: メンバーは簡単にシフト希望を入力できます
+- **管理者機能**: 管理者はすべてのメンバーのシフトを一覧で確認・編集できます
+
+## セットアップ
+
+### 環境変数
+
+`.env.local`ファイルを作成し、以下の環境変数を設定してください：
+
+```
+NEXT_PUBLIC_SUPABASE_URL=あなたのSupabaseのURL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=あなたのSupabaseの匿名キー
+```
+
+### インストール
+
+```bash
+npm install
+```
+
+### 開発サーバーの起動
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### ビルド
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## データベース設定
 
-## Learn More
+Supabaseで以下のテーブルを作成してください：
 
-To learn more about Next.js, take a look at the following resources:
+### groupsテーブル
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```sql
+CREATE TABLE groups (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL,
+  access_key TEXT NOT NULL UNIQUE,
+  admin_key TEXT NOT NULL UNIQUE,
+  admin_password TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### staffテーブル
 
-## Deploy on Vercel
+```sql
+CREATE TABLE staff (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL,
+  group_id UUID REFERENCES groups(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### shiftsテーブル
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```sql
+CREATE TABLE shifts (
+  id UUID PRIMARY KEY,
+  staff_id UUID REFERENCES staff(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,
+  start_time TEXT,
+  end_time TEXT,
+  is_off BOOLEAN NOT NULL DEFAULT FALSE,
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(staff_id, date)
+);
+```
+
+## 使い方
+
+1. トップページでグループを作成するか、既存のグループにアクセスします
+2. グループを作成した場合は、管理者キーを安全に保管してください
+3. アクセスキーを共有して、メンバーをグループに招待します
+4. メンバーはアクセスキーを使ってグループにアクセスし、シフト希望を入力できます
+5. 管理者は管理者キーを使って管理画面にアクセスし、すべてのシフトを管理できます
+
+## 技術スタック
+
+- React (Hooks)
+- Next.js
+- TypeScript
+- Tailwind CSS
+- Supabase (PostgreSQLデータベース)
+
+## Supabaseの設定
+
+1. [Supabase](https://supabase.com/)にアクセスして、アカウントを作成します。
+2. 新しいプロジェクトを作成します。
+3. プロジェクトが作成されたら、以下のテーブルを作成します：
+
+### staffテーブル
+```sql
+CREATE TABLE staff (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+```
+
+### shiftsテーブル
+```sql
+CREATE TABLE shifts (
+  id UUID PRIMARY KEY,
+  staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,
+  start_time TEXT,
+  end_time TEXT,
+  is_off BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  UNIQUE(staff_id, date)
+);
+```
+
+4. プロジェクトの設定から、API URLとAnon Keyを取得します。
+5. `.env.local`ファイルに以下の環境変数を設定します：
+
+```
+NEXT_PUBLIC_SUPABASE_URL=あなたのSupabase URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=あなたのSupabase Anon Key
+```
+
+## 開発環境のセットアップ
+
+```bash
+# 依存関係のインストール
+npm install
+
+# 開発サーバーの起動
+npm run dev
+```
+
+開発サーバーが起動したら、ブラウザで [http://localhost:3000](http://localhost:3000) にアクセスしてアプリケーションを確認できます。
+
+## 今後の開発予定
+
+- ユーザー認証機能
+- シフトの自動生成機能
+- カレンダー表示機能
+- シフト履歴の管理機能
+
+## ライセンス
+
+MIT
