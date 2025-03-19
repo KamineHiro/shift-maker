@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { staffData } from '@/data/mockData';
 import { ApiResponse, ShiftData } from '@/types';
+import { staffService } from '@/services/supabaseService';
 
 interface RouteParams {
   params: {
@@ -12,9 +12,10 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { id } = params;
-    const staff = staffData.find(s => s.id === id);
     
-    if (!staff) {
+    const staffResult = await staffService.getStaff(id);
+    
+    if (!staffResult) {
       const response: ApiResponse<null> = {
         success: false,
         error: 'スタッフが見つかりません'
@@ -25,7 +26,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     
     const response: ApiResponse<ShiftData> = {
       success: true,
-      data: staff
+      data: staffResult
     };
     
     return NextResponse.json(response);
@@ -43,46 +44,17 @@ export async function GET(request: Request, { params }: RouteParams) {
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const { id } = params;
-    const staffIndex = staffData.findIndex(s => s.id === id);
-    
-    if (staffIndex === -1) {
-      const response: ApiResponse<null> = {
-        success: false,
-        error: 'スタッフが見つかりません'
-      };
-      
-      return NextResponse.json(response, { status: 404 });
-    }
-    
     const { name } = await request.json();
     
     if (!name || typeof name !== 'string' || name.trim() === '') {
-      const response: ApiResponse<null> = {
-        success: false,
-        error: 'スタッフ名は必須です'
-      };
-      
-      return NextResponse.json(response, { status: 400 });
+      return NextResponse.json({ success: false, error: 'スタッフ名は必須です' }, { status: 400 });
     }
     
-    staffData[staffIndex] = {
-      ...staffData[staffIndex],
-      name
-    };
+    const updatedStaff = await staffService.updateStaff(id, name);
     
-    const response: ApiResponse<ShiftData> = {
-      success: true,
-      data: staffData[staffIndex]
-    };
-    
-    return NextResponse.json(response);
+    return NextResponse.json({ success: true, data: updatedStaff });
   } catch (error) {
-    const response: ApiResponse<null> = {
-      success: false,
-      error: 'スタッフ情報の更新に失敗しました'
-    };
-    
-    return NextResponse.json(response, { status: 500 });
+    return NextResponse.json({ success: false, error: 'スタッフ情報の更新に失敗しました' }, { status: 500 });
   }
 }
 
@@ -90,32 +62,17 @@ export async function PUT(request: Request, { params }: RouteParams) {
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const { id } = params;
-    const staffIndex = staffData.findIndex(s => s.id === id);
     
-    if (staffIndex === -1) {
-      const response: ApiResponse<null> = {
-        success: false,
-        error: 'スタッフが見つかりません'
-      };
-      
-      return NextResponse.json(response, { status: 404 });
+    // 削除前にスタッフデータを取得
+    const staff = await staffService.getStaff(id);
+    if (!staff) {
+      return NextResponse.json({ success: false, error: 'スタッフが見つかりません' }, { status: 404 });
     }
     
-    const deletedStaff = staffData[staffIndex];
-    staffData.splice(staffIndex, 1);
+    await staffService.deleteStaff(id);
     
-    const response: ApiResponse<ShiftData> = {
-      success: true,
-      data: deletedStaff
-    };
-    
-    return NextResponse.json(response);
+    return NextResponse.json({ success: true, data: staff });
   } catch (error) {
-    const response: ApiResponse<null> = {
-      success: false,
-      error: 'スタッフの削除に失敗しました'
-    };
-    
-    return NextResponse.json(response, { status: 500 });
+    return NextResponse.json({ success: false, error: 'スタッフの削除に失敗しました' }, { status: 500 });
   }
 } 

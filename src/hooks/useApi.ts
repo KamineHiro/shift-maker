@@ -66,6 +66,7 @@ export function useStaffApi() {
 
   // 特定のスタッフを取得
   const getStaff = useCallback((id: string) => {
+    console.log('useStaffApi.getStaff呼び出し:', { id, type: typeof id });
     return api.callApi(() => staffService.getStaff(id));
   }, [api]);
 
@@ -126,9 +127,52 @@ export function useShiftApi() {
   }, [api]);
   
   // シフト情報を更新
-  const updateShift = useCallback((staffId: string, date: string, shiftInfo: ShiftInfo) => {
-    return api.callApi(() => shiftService.updateShift(staffId, date, shiftInfo));
-  }, [api]);
+  const updateShift = useCallback(async (staffId: string, date: string, shiftInfo: ShiftInfo): Promise<ShiftInfo | null> => {
+    try {
+      console.log('API呼び出し - updateShift:', { staffId, date, shiftInfo });
+      
+      // staffIdが有効なUUIDであることを確認
+      if (!staffId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId)) {
+        throw new Error(`無効なスタッフID: ${staffId}`);
+      }
+      
+      // 完全なシフト情報を作成（staff_idとdateを追加）
+      const completeShiftInfo: ShiftInfo = {
+        ...shiftInfo,
+        staff_id: staffId,
+        date: date
+      };
+      
+      // 詳細なエラーハンドリングを追加
+      try {
+        const result = await shiftService.updateShift(staffId, date, completeShiftInfo);
+        console.log('シフト更新成功:', result);
+        return result;
+      } catch (serviceErr: any) {
+        console.error('シフト更新サービスエラー:', {
+          message: serviceErr?.message,
+          code: serviceErr?.code,
+          details: serviceErr?.details,
+          stack: serviceErr?.stack
+        });
+        throw serviceErr;
+      }
+    } catch (err: any) {
+      // エラー情報をより詳細に記録
+      console.error('シフト更新エラー:', {
+        message: err?.message,
+        code: err?.code,
+        details: err?.details,
+        stack: err?.stack,
+        fullError: JSON.stringify(err, Object.getOwnPropertyNames(err))
+      });
+      
+      // エラーメッセージを具体的に設定
+      const errorMessage = err?.message || err?.details?.message || 'シフト情報の更新に失敗しました';
+      setError(errorMessage);
+      return null;
+    }
+  }, []);
   
   // シフト情報を削除
   const deleteShift = useCallback((staffId: string, date: string) => {
@@ -257,6 +301,93 @@ export function useShiftApi() {
     }
   }, [api]);
 
+  // シフト確定状態を取得
+  const getShiftConfirmation = async (staffId: string) => {
+    try {
+      console.log('シフト確定状態取得:', staffId);
+      // 新しいRESTful APIエンドポイントを使用
+      const response = await fetch(`/api/shifts/staff/${staffId}/confirmation`, {
+        method: 'GET',
+      });
+      const data = await response.json();
+      
+      // レスポンスデータのデバッグ出力
+      console.log('確定状態取得レスポンス:', data);
+      
+      return data;
+    } catch (err: any) {
+      // エラー情報をより詳細に記録
+      console.error('シフト確定状態の取得エラー:', {
+        message: err?.message,
+        code: err?.code,
+        stack: err?.stack,
+        full: err
+      });
+      setError(err?.message || 'シフト確定状態の取得に失敗しました');
+      return { success: false, error: 'シフト確定状態の取得に失敗しました' };
+    }
+  };
+
+  // シフトを確定
+  const confirmShift = async (staffId: string) => {
+    try {
+      console.log('シフト確定処理:', staffId);
+      // 新しいRESTful APIエンドポイントを使用
+      const response = await fetch(`/api/shifts/staff/${staffId}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      
+      // レスポンスデータのデバッグ出力
+      console.log('シフト確定レスポンス:', data);
+      
+      return data;
+    } catch (err: any) {
+      // エラー情報をより詳細に記録
+      console.error('シフト確定エラー:', {
+        message: err?.message,
+        code: err?.code,
+        stack: err?.stack,
+        full: err
+      });
+      setError(err?.message || 'シフトの確定に失敗しました');
+      return { success: false, error: 'シフトの確定に失敗しました' };
+    }
+  };
+
+  // シフト確定を取り消し
+  const unconfirmShift = async (staffId: string) => {
+    try {
+      console.log('シフト確定取り消し処理:', staffId);
+      // 新しいRESTful APIエンドポイントを使用
+      const response = await fetch(`/api/shifts/staff/${staffId}/unconfirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      
+      // レスポンスデータのデバッグ出力
+      console.log('シフト確定取り消しレスポンス:', data);
+      
+      return data;
+    } catch (err: any) {
+      // エラー情報をより詳細に記録
+      console.error('シフト確定取り消しエラー:', {
+        message: err?.message,
+        code: err?.code,
+        stack: err?.stack,
+        full: err
+      });
+      setError(err?.message || 'シフト確定の取り消しに失敗しました');
+      return { success: false, error: 'シフト確定の取り消しに失敗しました' };
+    }
+  };
+
   return {
     getDates,
     getShift,
@@ -269,6 +400,9 @@ export function useShiftApi() {
     archiveCurrentShift,
     deletePastShift,
     cleanupOldShifts,
+    getShiftConfirmation,
+    confirmShift,
+    unconfirmShift,
     loading: api.loading,
     error: api.error || error
   };

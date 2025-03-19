@@ -56,7 +56,7 @@ export default function ManagerPage() {
 
   // シフトセルがクリックされたときの処理
   const handleCellClick = (staffId: string, date: string) => {
-    const staff = staffData.find(s => s.id === staffId);
+    const staff = staffData.find(s => s.staff_id === staffId);
     if (staff) {
       setSelectedStaff({ id: staffId, name: staff.name });
       setSelectedDate(date);
@@ -71,11 +71,11 @@ export default function ManagerPage() {
     try {
       const response = await shiftApi.updateShift(selectedStaff.id, selectedDate, shiftInfo);
       
-      if (response.success) {
+      if (response) {
         // 成功したら、ローカルの状態も更新
         setStaffData(prevData => 
           prevData.map(staff => {
-            if (staff.id === selectedStaff.id) {
+            if (staff.staff_id === selectedStaff.id) {
               return {
                 ...staff,
                 shifts: {
@@ -91,10 +91,10 @@ export default function ManagerPage() {
         setModalOpen(false);
       } else {
         // エラーメッセージを表示
-        setError(response.error || 'シフトの更新に失敗しました');
+        setError('シフトの更新に失敗しました');
       }
-    } catch (err) {
-      setError('シフトの更新中にエラーが発生しました');
+    } catch (err: any) {
+      setError(err?.message || 'シフトの更新中にエラーが発生しました');
     }
   };
 
@@ -124,7 +124,7 @@ export default function ManagerPage() {
       
       if (response.success) {
         // 成功したら、ローカルの状態も更新
-        setStaffData(prev => prev.filter(staff => staff.id !== staffId));
+        setStaffData(prev => prev.filter(staff => staff.staff_id !== staffId));
       } else {
         // エラーメッセージを表示
         setError(response.error || 'スタッフの削除に失敗しました');
@@ -200,11 +200,11 @@ export default function ManagerPage() {
                       </thead>
                       <tbody>
                         {staffData.map((staff) => (
-                          <tr key={`staff-${staff.id}`}>
+                          <tr key={`staff-${staff.staff_id}`}>
                             <td className="px-4 py-2 border border-gray-200">{staff.name}</td>
                             <td className="px-4 py-2 border border-gray-200">
                               <button
-                                onClick={() => handleDeleteStaff(staff.id)}
+                                onClick={() => handleDeleteStaff(staff.staff_id)}
                                 className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
                               >
                                 削除
@@ -236,7 +236,7 @@ export default function ManagerPage() {
             onSave={handleShiftSave}
             staffName={selectedStaff.name}
             date={selectedDate}
-            currentShift={selectedStaff ? staffData.find(s => s.id === selectedStaff.id)?.shifts[selectedDate] : undefined}
+            currentShift={selectedStaff ? staffData.find(s => s.staff_id === selectedStaff.id)?.shifts[selectedDate] : undefined}
           />
         )}
       </div>

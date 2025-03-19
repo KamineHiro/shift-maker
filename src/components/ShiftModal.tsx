@@ -24,6 +24,26 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
   const [note, setNote] = useState(currentShift?.note || '');
   const [isAllDay, setIsAllDay] = useState(currentShift?.isAllDay ?? false);
 
+  // currentShiftが変更された場合にフォームを更新
+  useEffect(() => {
+    if (currentShift) {
+      console.log('モーダルに現在のシフト情報を設定:', currentShift);
+      setStartTime(currentShift.startTime || '9:00');
+      setEndTime(currentShift.endTime || '17:00');
+      setIsWorking(currentShift.isWorking ?? true);
+      setNote(currentShift.note || '');
+      setIsAllDay(currentShift.isAllDay ?? false);
+    } else {
+      // リセット
+      console.log('モーダルのシフト情報をリセット');
+      setStartTime('9:00');
+      setEndTime('17:00');
+      setIsWorking(true);
+      setNote('');
+      setIsAllDay(false);
+    }
+  }, [currentShift, date]);
+
   // 全日OKが選択された場合、時間を自動設定
   useEffect(() => {
     if (isAllDay) {
@@ -36,13 +56,20 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
+    
+    const newShiftInfo: ShiftInfo = {
       startTime,
       endTime,
       isWorking,
       note,
-      isAllDay
-    });
+      isAllDay,
+      // TypeScript型定義上は必要だが、実際の値は上位コンポーネントで設定される
+      staff_id: '',
+      date: ''
+    };
+    
+    console.log('シフト保存を試行:', newShiftInfo);
+    onSave(newShiftInfo);
     onClose();
   };
 

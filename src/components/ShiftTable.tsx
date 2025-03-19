@@ -1,16 +1,5 @@
 import React from 'react';
-
-interface ShiftData {
-  id: string;
-  name: string;
-  shifts: {
-    [date: string]: {
-      startTime: string;
-      endTime: string;
-      isOff: boolean;
-    };
-  };
-}
+import { ShiftData, ShiftInfo } from '@/types';
 
 interface ShiftTableProps {
   dates: string[];
@@ -37,7 +26,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ dates, staffData, onCellClick }
         </thead>
         <tbody>
           {staffData.map((staff) => (
-            <tr key={staff.id}>
+            <tr key={staff.staff_id}>
               <td className="px-4 py-2 border border-gray-200 font-medium">
                 {staff.name}
               </td>
@@ -45,12 +34,12 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ dates, staffData, onCellClick }
                 const shift = staff.shifts[date];
                 return (
                   <td 
-                    key={`${staff.id}-${date}`} 
+                    key={`${staff.staff_id}-${date}`} 
                     className="px-4 py-2 border border-gray-200 text-center cursor-pointer hover:bg-gray-100"
-                    onClick={() => onCellClick(staff.id, date)}
+                    onClick={() => onCellClick(staff.staff_id, date)}
                   >
                     {shift ? (
-                      shift.isOff ? (
+                      !shift.isWorking ? (
                         <span className="text-red-500 font-bold">×</span>
                       ) : (
                         <span>

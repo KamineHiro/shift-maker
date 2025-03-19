@@ -1,6 +1,7 @@
 // シフトデータの型定義
 export interface ShiftData {
-  id: string;
+  id?: string;         // Supabaseのレコードid（プライマリーキー）
+  staff_id: string;    // 旧バージョンとの互換性のために残す
   name: string;
   shifts: {
     [date: string]: ShiftInfo;
@@ -8,6 +9,8 @@ export interface ShiftData {
 }
 
 export interface ShiftInfo {
+  staff_id: string;  // 追加
+  date: string; // ← 追加！
   isWorking: boolean;
   startTime?: string;
   endTime?: string;

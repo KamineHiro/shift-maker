@@ -7,6 +7,7 @@ import { useShiftApi, useStaffApi } from '@/hooks/useApi';
 import { ShiftData, ShiftInfo } from '@/types';
 import { formatDisplayDate } from '@/utils/helpers';
 import ShiftModal from '@/components/ShiftModal';
+import { supabase } from '@/lib/supabase';
 
 export default function GroupPage() {
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function GroupPage() {
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [isShiftConfirmed, setIsShiftConfirmed] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showStaffSelection, setShowStaffSelection] = useState(true);
   
   // グループ情報がない場合はトップページにリダイレクト
   useEffect(() => {
@@ -76,18 +78,32 @@ export default function GroupPage() {
         // ローカルストレージからスタッフ情報を取得
         const storedStaffId = localStorage.getItem(`staffId_${group.groupId}`);
         const storedStaffName = localStorage.getItem(`staffName_${group.groupId}`);
-        const storedShiftConfirmed = localStorage.getItem(`shiftConfirmed_${group.groupId}_${storedStaffId}`);
         
         if (storedStaffId && storedStaffName) {
           setStaffId(storedStaffId);
           setStaffName(storedStaffName);
-          setIsShiftConfirmed(storedShiftConfirmed === 'true');
+          
+          // シフト確定状態を取得
+          const confirmResponse = await shiftApi.getShiftConfirmation(storedStaffId);
+          if (confirmResponse.success && confirmResponse.data) {
+            setIsShiftConfirmed(confirmResponse.data.isConfirmed);
+            console.log('シフト確定状態を取得しました:', confirmResponse.data.isConfirmed);
+            
+            // ローカルストレージにも保存して他の画面で参照できるようにする
+            // これはデータベース同期のバックアップとしての役割のみ
+            localStorage.setItem(`shiftConfirmed_${group.groupId}_${storedStaffId}_individual`, 
+              confirmResponse.data.isConfirmed ? 'true' : 'false');
+          }
           
           // スタッフのシフトデータを取得
           const shiftsResponse = await shiftApi.getStaffShifts(storedStaffId);
           if (shiftsResponse.success && shiftsResponse.data) {
+            console.log('シフトデータを取得しました:', shiftsResponse.data);
             setShifts(shiftsResponse.data as Record<string, ShiftInfo>);
           }
+          
+          // 常に最初はスタッフ選択画面を表示するため、ここではフラグを変更しない
+          setShowStaffSelection(true);
         }
         
         setLoading(false);
@@ -99,37 +115,82 @@ export default function GroupPage() {
     
     fetchInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.groupId]); // groupオブジェクト全体ではなく、groupIdのみに依存させる
+  }, [group?.groupId]);
   
   // 既存のスタッフを選択
   const handleSelectExistingStaff = async () => {
-    if (!selectedExistingStaffId) return;
+    if (!selectedExistingStaffId || !group) return;
     
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log('スタッフ選択 - 選択されたID:', selectedExistingStaffId);
       
       // 選択したスタッフの情報を取得
       const response = await staffApi.getStaff(selectedExistingStaffId);
+      console.log('スタッフ取得応答:', response);
       
       if (response.success && response.data) {
         const staffData = response.data as ShiftData;
-        setStaffId(staffData.id);
+        
+        // データベースのスタッフID（プライマリーキー）を使用
+        let actualStaffId = '';
+        if (staffData.id) {
+          actualStaffId = staffData.id;
+        } else if (staffData.staff_id) {
+          actualStaffId = staffData.staff_id;
+        } else {
+          setError('スタッフIDが見つかりません');
+          setLoading(false);
+          return;
+        }
+        
+        console.log('使用するスタッフID:', actualStaffId);
+        
+        setStaffId(actualStaffId);
         setStaffName(staffData.name);
         
         // ローカルストレージに保存
-        localStorage.setItem(`staffId_${group!.groupId}`, staffData.id);
-        localStorage.setItem(`staffName_${group!.groupId}`, staffData.name);
+        localStorage.setItem(`staffId_${group.groupId}`, actualStaffId);
+        localStorage.setItem(`staffName_${group.groupId}`, staffData.name);
+        
+        // シフト確定状態を取得
+        const confirmResponse = await shiftApi.getShiftConfirmation(actualStaffId);
+        console.log('シフト確定状態取得応答:', confirmResponse);
+        
+        if (confirmResponse.success && confirmResponse.data) {
+          setIsShiftConfirmed(confirmResponse.data.isConfirmed);
+          console.log('確定状態設定:', confirmResponse.data.isConfirmed);
+          
+          // バックアップとしてローカルストレージにも保存
+          localStorage.setItem(`shiftConfirmed_${group.groupId}_${actualStaffId}_individual`, 
+            confirmResponse.data.isConfirmed ? 'true' : 'false');
+        } else {
+          setIsShiftConfirmed(false);
+          console.log('確定状態取得に失敗したため、デフォルトでfalseを設定');
+        }
         
         // シフトデータを取得
-        const shiftsResponse = await shiftApi.getStaffShifts(staffData.id);
+        const shiftsResponse = await shiftApi.getStaffShifts(actualStaffId);
+        console.log('シフトデータ取得応答:', shiftsResponse);
+        
         if (shiftsResponse.success && shiftsResponse.data) {
           setShifts(shiftsResponse.data as Record<string, ShiftInfo>);
+          console.log('シフトデータ設定:', shiftsResponse.data);
+        } else {
+          setShifts({});
+          console.log('シフトデータが取得できなかったため、空のオブジェクトを設定');
         }
+        
+        // スタッフ選択後にシフト入力画面に切り替え
+        setShowStaffSelection(false);
       } else {
         setError(response.error || 'スタッフの取得に失敗しました');
       }
-    } catch (err) {
-      setError('スタッフの取得中にエラーが発生しました');
+    } catch (err: any) {
+      console.error('スタッフ選択エラー:', err);
+      setError(err?.message || 'スタッフの取得中にエラーが発生しました');
     } finally {
       setLoading(false);
     }
@@ -146,22 +207,41 @@ export default function GroupPage() {
     if (!staffId || !selectedDate) return;
     
     try {
-      const response = await shiftApi.updateShift(staffId, selectedDate, shiftInfo);
+      setLoading(true);
+      setError(null);
       
-      if (response.success) {
+      // 完全なシフト情報を作成（staff_idとdateを追加）
+      const completeShiftInfo: ShiftInfo = {
+        ...shiftInfo,
+        staff_id: staffId,
+        date: selectedDate
+      };
+      
+      console.log('シフト更新を開始します:', { staffId, selectedDate, completeShiftInfo });
+      const result = await shiftApi.updateShift(staffId, selectedDate, completeShiftInfo);
+      
+      if (result) {
+        console.log('シフト更新が成功しました:', result);
         // 成功したら、ローカルの状態も更新
         setShifts(prev => ({
           ...prev,
-          [selectedDate]: shiftInfo
+          [selectedDate]: {
+            ...completeShiftInfo,
+            staff_id: staffId,
+            date: selectedDate
+          }
         }));
         
         setModalOpen(false);
       } else {
-        // エラーメッセージを表示
-        setError(response.error || 'シフトの更新に失敗しました');
+        console.error('シフト更新に失敗しました');
+        setError('シフトの更新に失敗しました');
       }
-    } catch (err) {
-      setError('シフトの更新中にエラーが発生しました');
+    } catch (err: any) {
+      console.error('シフト更新エラー:', err);
+      setError(err?.message || 'シフトの更新中にエラーが発生しました');
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -243,22 +323,55 @@ export default function GroupPage() {
   };
   
   // シフト確定を実行
-  const executeConfirmShift = () => {
+  const executeConfirmShift = async () => {
     if (!staffId || !group) return;
     
-    // ローカルストレージに確定状態を保存
-    localStorage.setItem(`shiftConfirmed_${group.groupId}_${staffId}`, 'true');
-    setIsShiftConfirmed(true);
-    setShowConfirmDialog(false);
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await shiftApi.confirmShift(staffId);
+      
+      if (response.success && response.data) {
+        setIsShiftConfirmed(response.data.isConfirmed);
+        
+        // ローカルストレージも更新（バックアップ）
+        localStorage.setItem(`shiftConfirmed_${group.groupId}_${staffId}_individual`, 
+          response.data.isConfirmed ? 'true' : 'false');
+          
+        setShowConfirmDialog(false);
+      } else {
+        setError(response.error || 'シフトの確定に失敗しました');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'シフトの確定中にエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
   };
   
   // シフト確定を取り消し
-  const cancelConfirmShift = () => {
+  const cancelConfirmShift = async () => {
     if (!staffId || !group) return;
     
-    // ローカルストレージから確定状態を削除
-    localStorage.removeItem(`shiftConfirmed_${group.groupId}_${staffId}`);
-    setIsShiftConfirmed(false);
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await shiftApi.unconfirmShift(staffId);
+      
+      if (response.success && response.data) {
+        setIsShiftConfirmed(response.data.isConfirmed);
+        
+        // ローカルストレージも更新（バックアップ）
+        localStorage.setItem(`shiftConfirmed_${group.groupId}_${staffId}_individual`, 
+          response.data.isConfirmed ? 'true' : 'false');
+      } else {
+        setError(response.error || 'シフト確定の取り消しに失敗しました');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'シフト確定の取り消し中にエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
   };
   
   // リダイレクト中の表示
@@ -301,7 +414,7 @@ export default function GroupPage() {
           </div>
         )}
         
-        {!staffId ? (
+        {showStaffSelection ? (
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">スタッフを選択してください</h2>
             <p className="text-gray-600 mb-4">
@@ -322,11 +435,15 @@ export default function GroupPage() {
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   >
                     <option value="">選択してください</option>
-                    {existingStaff.map((staff) => (
-                      <option key={staff.id} value={staff.id}>
-                        {staff.name}
-                      </option>
-                    ))}
+                    {existingStaff.map((staff) => {
+                      // staff.id がある場合はそれを使用、なければ staff_id を使用
+                      const staffId = staff.id || staff.staff_id;
+                      return (
+                        <option key={staffId} value={staffId}>
+                          {staff.name}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 
@@ -372,12 +489,19 @@ export default function GroupPage() {
               <div className="flex space-x-2">
                 <button
                   onClick={() => {
-                    setStaffId(null);
-                    setStaffName('');
-                    setShifts({});
-                    localStorage.removeItem(`staffId_${group.groupId}`);
-                    localStorage.removeItem(`staffName_${group.groupId}`);
-                    localStorage.removeItem(`shiftConfirmed_${group.groupId}_${staffId}`);
+                    // スタッフ選択画面に戻る
+                    setShowStaffSelection(true);
+                    
+                    // 現在のスタッフの情報を削除
+                    if (staffId && group) {
+                      localStorage.removeItem(`staffId_${group.groupId}`);
+                      localStorage.removeItem(`staffName_${group.groupId}`);
+                      localStorage.removeItem(`shiftConfirmed_${group.groupId}_${staffId}_individual`);
+                      setStaffId(null);
+                      setStaffName('');
+                      setShifts({});
+                      setIsShiftConfirmed(false);
+                    }
                   }}
                   className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
                 >
