@@ -9,6 +9,19 @@
 - **シフト希望入力**: メンバーは簡単にシフト希望を入力できます
 - **管理者機能**: 管理者はすべてのメンバーのシフトを一覧で確認・編集できます
 
+## 技術スタック
+
+- **フロントエンド**
+  - Next.js 15.2.2
+  - React 19
+  - TypeScript
+  - Tailwind CSS
+  - DaisyUI
+  - Headless UI
+  - Hero Icons
+- **バックエンド/データベース**
+  - Supabase (PostgreSQLデータベース)
+
 ## セットアップ
 
 ### 環境変数
@@ -90,14 +103,6 @@ CREATE TABLE shifts (
 4. メンバーはアクセスキーを使ってグループにアクセスし、シフト希望を入力できます
 5. 管理者は管理者キーを使って管理画面にアクセスし、すべてのシフトを管理できます
 
-## 技術スタック
-
-- React (Hooks)
-- Next.js
-- TypeScript
-- Tailwind CSS
-- Supabase (PostgreSQLデータベース)
-
 ## Supabaseの設定
 
 1. [Supabase](https://supabase.com/)にアクセスして、アカウントを作成します。
@@ -144,16 +149,3 @@ npm install
 # 開発サーバーの起動
 npm run dev
 ```
-
-開発サーバーが起動したら、ブラウザで [http://localhost:3000](http://localhost:3000) にアクセスしてアプリケーションを確認できます。
-
-## 今後の開発予定
-
-- ユーザー認証機能
-- シフトの自動生成機能
-- カレンダー表示機能
-- シフト履歴の管理機能
-
-## ライセンス
-
-MIT

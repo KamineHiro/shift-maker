@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
-import { staffData } from '@/data/mockData';
+import { createClient } from '@/utils/supabase/server';
 import { ApiResponse, ShiftData } from '@/types';
 
 // GET: スタッフ一覧を取得
 export async function GET() {
   try {
+    const supabase = createClient();
+    const { data: staffData, error } = await supabase
+      .from('staff')
+      .select('*');
+
+    if (error) throw error;
+
     const response: ApiResponse<ShiftData[]> = {
       success: true,
       data: staffData
@@ -34,14 +41,15 @@ export async function POST(request: Request) {
       
       return NextResponse.json(response, { status: 400 });
     }
-    
-    const newStaff: ShiftData = {
-      id: Date.now().toString(),
-      name,
-      shifts: {}
-    };
-    
-    staffData.push(newStaff);
+
+    const supabase = createClient();
+    const { data: newStaff, error } = await supabase
+      .from('staff')
+      .insert([{ name }])
+      .select()
+      .single();
+
+    if (error) throw error;
     
     const response: ApiResponse<ShiftData> = {
       success: true,
