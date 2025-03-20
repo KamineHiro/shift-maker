@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { ApiResponse, ShiftData } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 // GET: スタッフ一覧を取得
 export async function GET() {
@@ -34,7 +35,7 @@ export async function GET() {
 // POST: 新しいスタッフを追加
 export async function POST(request: Request) {
   try {
-    const { name } = await request.json();
+    const { name, groupId } = await request.json();
     
     if (!name || typeof name !== 'string' || name.trim() === '') {
       const response: ApiResponse<null> = {
@@ -45,9 +46,19 @@ export async function POST(request: Request) {
       return NextResponse.json(response, { status: 400 });
     }
 
+    // UUIDを生成
+    const id = uuidv4();
+    
+    // スタッフデータのInsert（user_idフィールドをデフォルトでnullに設定）
     const { data: newStaff, error } = await supabase
       .from('staff')
-      .insert([{ name }])
+      .insert([{ 
+        id,
+        name,
+        group_id: groupId,
+        user_id: null,
+        role: 'staff'
+      }])
       .select()
       .maybeSingle();
 

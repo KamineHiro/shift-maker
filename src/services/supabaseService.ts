@@ -116,24 +116,36 @@ export const staffService = {
   // スタッフを追加
   async addStaff(name: string, groupId?: string): Promise<ShiftData> {
     try {
-      // 現在のユーザーセッションを取得
-      const { data: { user } } = await supabase.auth.getUser();
-
+      console.log('スタッフ追加開始:', { name, groupId });
+      
+      // IDを生成
       const id = uuidv4();
+      
+      // スタッフデータを挿入
       const { data, error } = await supabase
         .from('staff')
         .insert([{ 
           id, 
           name,
           group_id: groupId,
-          user_id: user?.id || null
+          user_id: null,  // 明示的にnullを設定
+          role: 'staff'
         }])
         .select()
         .maybeSingle();
 
-      if (error) throw error;
-      if (!data) throw new Error('スタッフの追加に失敗しました');
+      if (error) {
+        console.error('スタッフ追加中のSupabaseエラー:', error);
+        throw error;
+      }
+      
+      if (!data) {
+        console.error('スタッフの追加に失敗: データが返されませんでした');
+        throw new Error('スタッフの追加に失敗しました');
+      }
 
+      console.log('スタッフ追加成功:', data);
+      
       return {
         staff_id: data.id,
         name: data.name,
