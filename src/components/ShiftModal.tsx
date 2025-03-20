@@ -136,197 +136,200 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
 
   return (
     <div 
-      className={`fixed inset-0 flex items-center justify-center z-50 transition-all duration-300 ease-in-out overflow-auto py-4 ${isVisible ? 'bg-gray-400 bg-opacity-5' : 'bg-transparent pointer-events-none'}`}
+      className="fixed inset-0 z-50 overflow-y-auto bg-gray-400 bg-opacity-5 px-4"
+      style={{ display: isVisible ? 'block' : 'none' }}
       onClick={handleClose}
     >
-      <div 
-        className={`bg-white rounded-lg p-5 py-6 w-full max-w-md shadow-xl transition-all duration-300 transform my-auto mx-4 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
-        onClick={e => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-bold mb-5">シフト入力</h2>
-        <p className="mb-5">
-          <span className="font-medium">{staffName}</span> - <span className="text-green-600">{date}</span>
-        </p>
-        
-        <form onSubmit={handleSubmit} className="max-h-[calc(100vh-12rem)] overflow-y-auto pb-2">
-          <div className="mb-4 space-y-2">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={!isWorking}
-                onChange={(e) => setIsWorking(!e.target.checked)}
-                className="mr-2"
-              />
-              <span>休み</span>
-            </label>
-          </div>
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div 
+          className={`bg-white rounded-lg p-5 w-full max-w-md mx-6 shadow-xl transition-all duration-300 transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
+          onClick={e => e.stopPropagation()}
+        >
+          <h2 className="text-xl font-bold mb-5">シフト入力</h2>
+          <p className="mb-5">
+            <span className="font-medium">{staffName}</span> - <span className="text-green-600">{date}</span>
+          </p>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4 space-y-2">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={!isWorking}
+                  onChange={(e) => setIsWorking(!e.target.checked)}
+                  className="mr-2"
+                />
+                <span>休み</span>
+              </label>
+            </div>
 
-          {isWorking && (
-            <div className="mb-4">
-              <label className="block mb-2 font-medium">シフトタイプ</label>
-              <div className="mb-3">
-                <p className="text-sm font-medium text-gray-700 mb-2">ランチシフト</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'lunch-early' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
+            {isWorking && (
+              <div className="mb-4">
+                <label className="block mb-2 font-medium">シフトタイプ</label>
+                <div className="mb-3">
+                  <p className="text-sm font-medium text-gray-700 mb-2">ランチシフト</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'lunch-early' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
+                      <input
+                        type="radio"
+                        name="shiftType"
+                        checked={shiftType === 'lunch-early'}
+                        onChange={() => setShiftType('lunch-early')}
+                        className="mr-2"
+                      />
+                      <div>
+                        <span className="font-medium block">早め</span>
+                        <span className="text-sm text-gray-600">10:00 - 16:00</span>
+                      </div>
+                    </label>
+                    <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'lunch-late' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
+                      <input
+                        type="radio"
+                        name="shiftType"
+                        checked={shiftType === 'lunch-late'}
+                        onChange={() => setShiftType('lunch-late')}
+                        className="mr-2"
+                      />
+                      <div>
+                        <span className="font-medium block">遅め</span>
+                        <span className="text-sm text-gray-600">11:00 - 16:00</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                
+                <div className="mb-3">
+                  <p className="text-sm font-medium text-gray-700 mb-2">ディナーシフト</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'dinner-early' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
+                      <input
+                        type="radio"
+                        name="shiftType"
+                        checked={shiftType === 'dinner-early'}
+                        onChange={() => setShiftType('dinner-early')}
+                        className="mr-2"
+                      />
+                      <div>
+                        <span className="font-medium block">早め</span>
+                        <span className="text-sm text-gray-600">16:00 - 22:00</span>
+                      </div>
+                    </label>
+                    <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'dinner-late' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
+                      <input
+                        type="radio"
+                        name="shiftType"
+                        checked={shiftType === 'dinner-late'}
+                        onChange={() => setShiftType('dinner-late')}
+                        className="mr-2"
+                      />
+                      <div>
+                        <span className="font-medium block">遅め</span>
+                        <span className="text-sm text-gray-600">17:00 - 22:00</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                
+                <div className="mb-3">
+                  <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'allday' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
                     <input
                       type="radio"
                       name="shiftType"
-                      checked={shiftType === 'lunch-early'}
-                      onChange={() => setShiftType('lunch-early')}
+                      checked={shiftType === 'allday'}
+                      onChange={() => setShiftType('allday')}
                       className="mr-2"
                     />
                     <div>
-                      <span className="font-medium block">早め</span>
-                      <span className="text-sm text-gray-600">10:00 - 16:00</span>
-                    </div>
-                  </label>
-                  <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'lunch-late' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
-                    <input
-                      type="radio"
-                      name="shiftType"
-                      checked={shiftType === 'lunch-late'}
-                      onChange={() => setShiftType('lunch-late')}
-                      className="mr-2"
-                    />
-                    <div>
-                      <span className="font-medium block">遅め</span>
-                      <span className="text-sm text-gray-600">11:00 - 16:00</span>
+                      <span className="font-medium block">全日勤務</span>
+                      <span className="text-sm text-gray-600">09:00 - 22:00</span>
                     </div>
                   </label>
                 </div>
-              </div>
-              
-              <div className="mb-3">
-                <p className="text-sm font-medium text-gray-700 mb-2">ディナーシフト</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'dinner-early' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
-                    <input
-                      type="radio"
-                      name="shiftType"
-                      checked={shiftType === 'dinner-early'}
-                      onChange={() => setShiftType('dinner-early')}
-                      className="mr-2"
-                    />
-                    <div>
-                      <span className="font-medium block">早め</span>
-                      <span className="text-sm text-gray-600">16:00 - 22:00</span>
-                    </div>
-                  </label>
-                  <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'dinner-late' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
-                    <input
-                      type="radio"
-                      name="shiftType"
-                      checked={shiftType === 'dinner-late'}
-                      onChange={() => setShiftType('dinner-late')}
-                      className="mr-2"
-                    />
-                    <div>
-                      <span className="font-medium block">遅め</span>
-                      <span className="text-sm text-gray-600">17:00 - 22:00</span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-              
-              <div className="mb-3">
-                <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'allday' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
+                
+                <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'custom' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
                   <input
                     type="radio"
                     name="shiftType"
-                    checked={shiftType === 'allday'}
-                    onChange={() => setShiftType('allday')}
+                    checked={shiftType === 'custom'}
+                    onChange={() => setShiftType('custom')}
                     className="mr-2"
                   />
-                  <div>
-                    <span className="font-medium block">全日勤務</span>
-                    <span className="text-sm text-gray-600">09:00 - 22:00</span>
-                  </div>
+                  <span className="font-medium">時間を指定する</span>
                 </label>
               </div>
-              
-              <label className={`border rounded-lg p-3 flex items-center cursor-pointer transition-all duration-200 ${shiftType === 'custom' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'}`}>
-                <input
-                  type="radio"
-                  name="shiftType"
-                  checked={shiftType === 'custom'}
-                  onChange={() => setShiftType('custom')}
-                  className="mr-2"
-                />
-                <span className="font-medium">時間を指定する</span>
-              </label>
-            </div>
-          )}
+            )}
 
-          {isWorking && shiftType === 'custom' && (
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block mb-1 font-medium">開始時間</label>
-                <select
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  {timeOptions.map((time) => (
-                    <option key={`start-${time}`} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
+            {isWorking && shiftType === 'custom' && (
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block mb-1 font-medium">開始時間</label>
+                  <select
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded"
+                  >
+                    {timeOptions.map((time) => (
+                      <option key={`start-${time}`} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium">終了時間</label>
+                  <select
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded"
+                  >
+                    {timeOptions.map((time) => (
+                      <option key={`end-${time}`} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block mb-1 font-medium">終了時間</label>
-                <select
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  {timeOptions.map((time) => (
-                    <option key={`end-${time}`} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
+            )}
+
+            {isWorking && shiftType !== 'custom' && (
+              <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded transition-all duration-200">
+                {shiftType === 'lunch-early' && <p>ランチ早番: 10:00から16:00まで勤務</p>}
+                {shiftType === 'lunch-late' && <p>ランチ遅番: 11:00から16:00まで勤務</p>}
+                {shiftType === 'dinner-early' && <p>ディナー早番: 16:00から22:00まで勤務</p>}
+                {shiftType === 'dinner-late' && <p>ディナー遅番: 17:00から22:00まで勤務</p>}
+                {shiftType === 'allday' && <p>全日勤務: 09:00から22:00まで勤務</p>}
               </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block mb-1 font-medium">備考</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded"
+                rows={3}
+                placeholder="備考があれば入力してください"
+              />
             </div>
-          )}
 
-          {isWorking && shiftType !== 'custom' && (
-            <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded transition-all duration-200">
-              {shiftType === 'lunch-early' && <p>ランチ早番: 10:00から16:00まで勤務</p>}
-              {shiftType === 'lunch-late' && <p>ランチ遅番: 11:00から16:00まで勤務</p>}
-              {shiftType === 'dinner-early' && <p>ディナー早番: 16:00から22:00まで勤務</p>}
-              {shiftType === 'dinner-late' && <p>ディナー遅番: 17:00から22:00まで勤務</p>}
-              {shiftType === 'allday' && <p>全日勤務: 09:00から22:00まで勤務</p>}
+            <div className="flex justify-end gap-2 mt-8">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors duration-200"
+              >
+                キャンセル
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+              >
+                保存
+              </button>
             </div>
-          )}
-
-          <div className="mb-4">
-            <label className="block mb-1 font-medium">備考</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              rows={3}
-              placeholder="備考があれば入力してください"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 mt-8">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors duration-200"
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
-            >
-              保存
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

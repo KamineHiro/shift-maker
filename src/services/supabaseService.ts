@@ -11,7 +11,7 @@ export const staffService = {
       let query = supabase
         .from('staff')
         .select('*')
-        .order('name');
+        .order('created_at', { ascending: true });
       
       // グループIDが指定されている場合はフィルタリング
       if (groupId) {
