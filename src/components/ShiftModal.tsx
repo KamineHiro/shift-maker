@@ -22,7 +22,6 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
   const [endTime, setEndTime] = useState(currentShift?.endTime || '17:00');
   const [isWorking, setIsWorking] = useState(currentShift?.isWorking ?? true);
   const [note, setNote] = useState(currentShift?.note || '');
-  const [isAllDay, setIsAllDay] = useState(currentShift?.isAllDay ?? false);
   const [shiftType, setShiftType] = useState<'custom' | 'lunch-early' | 'lunch-late' | 'dinner-early' | 'dinner-late' | 'allday'>('custom');
   const [isVisible, setIsVisible] = useState(false);
 
@@ -46,7 +45,6 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
       setEndTime(currentShift.endTime || '17:00');
       setIsWorking(currentShift.isWorking ?? true);
       setNote(currentShift.note || '');
-      setIsAllDay(currentShift.isAllDay ?? false);
       
       // シフトタイプを設定
       if (currentShift.isAllDay) {
@@ -69,7 +67,6 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
       setEndTime('17:00');
       setIsWorking(true);
       setNote('');
-      setIsAllDay(false);
       setShiftType('custom');
     }
   }, [currentShift, date]);
@@ -79,23 +76,18 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
     if (shiftType === 'lunch-early') {
       setStartTime('10:00');
       setEndTime('16:00');
-      setIsAllDay(false);
     } else if (shiftType === 'lunch-late') {
       setStartTime('11:00');
       setEndTime('16:00');
-      setIsAllDay(false);
     } else if (shiftType === 'dinner-early') {
       setStartTime('16:00');
       setEndTime('22:00');
-      setIsAllDay(false);
     } else if (shiftType === 'dinner-late') {
       setStartTime('17:00');
       setEndTime('22:00');
-      setIsAllDay(false);
     } else if (shiftType === 'allday') {
       setStartTime('09:00');
       setEndTime('22:00');
-      setIsAllDay(true);
     }
   }, [shiftType]);
 
