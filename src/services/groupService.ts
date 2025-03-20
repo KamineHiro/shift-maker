@@ -18,12 +18,16 @@ export const groupService = {
           name,
           access_key: accessKey,
           admin_key: adminKey,
-          admin_password: adminPassword // 管理者パスワードを保存
+          admin_password: adminPassword, // 管理者パスワードを保存
+          owner_id: 1 // owner_idに1を設定（必須フィールド）
         }])
         .select()
         .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabaseエラー詳細:', error);
+        throw error;
+      }
       if (!data) throw new Error('グループの作成に失敗しました');
       
       return {

@@ -98,10 +98,21 @@ export default function Home() {
     
     try {
       setIsSubmitting(true);
+      console.log('グループ作成開始:', { name: groupName.trim() });
+      
       const adminKey = await createGroup(groupName.trim(), adminPassword.trim());
+      console.log('グループ作成成功:', { adminKey });
+      
       setCreatedAdminKey(adminKey);
     } catch (err) {
       console.error('グループの作成に失敗しました:', err);
+      // エラーの詳細を表示
+      if (err instanceof Error) {
+        console.error('エラー詳細:', err.message);
+        console.error('エラースタック:', err.stack);
+      } else {
+        console.error('不明なエラー:', JSON.stringify(err, null, 2));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -126,7 +137,7 @@ export default function Home() {
           シフト作成アプリ
         </h1>
         <p className="mt-3 text-center text-lg text-slate-600">
-          簡単にシフト希望を共有・管理できるツール
+          簡単にシフト希望を共有・管理できます
         </p>
       </div>
 
