@@ -140,11 +140,11 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
       onClick={handleClose}
     >
       <div 
-        className={`bg-white rounded-lg p-6 w-full max-w-md shadow-xl transition-all duration-300 transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
+        className={`bg-white rounded-lg p-6 py-8 w-full max-w-md shadow-xl transition-all duration-300 transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
         onClick={e => e.stopPropagation()}
       >
-        <h2 className="text-xl font-bold mb-4">シフト入力</h2>
-        <p className="mb-4">
+        <h2 className="text-xl font-bold mb-6">シフト入力</h2>
+        <p className="mb-6">
           <span className="font-medium">{staffName}</span> - <span className="text-green-600">{date}</span>
         </p>
         
@@ -311,7 +311,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
             />
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 mt-8">
             <button
               type="button"
               onClick={handleClose}
