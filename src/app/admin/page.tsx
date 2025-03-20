@@ -58,46 +58,46 @@ export default function AdminPage() {
   // 初期データの読み込み
   useEffect(() => {
     let isSubscribed = true;
+    if (!group?.groupId) return;
 
     const fetchInitialData = async () => {
-      if (!group) return;
-      
       try {
-        if (isSubscribed) {
-          setError(null);
-        }
+        setError(null);
         
-        const dateRangeResponse = await shiftApi.getDateRange(group.groupId);
-        if (!isSubscribed) return;
+        // 日付範囲とスタッフデータを並列で取得
+        const [dateRangeResponse, staffResponse] = await Promise.all([
+          shiftApi.getDateRange(group.groupId),
+          staffApi.getStaffList(group.groupId)
+        ]);
 
-        if (dateRangeResponse.success && dateRangeResponse.data) {
+        // 日付範囲の処理
+        if (isSubscribed && dateRangeResponse.success && dateRangeResponse.data) {
           const { startDate: savedStartDate, days } = dateRangeResponse.data;
-          setStartDate(savedStartDate);
-          setShiftDays(days);
+          // 現在の値と異なる場合のみ更新
+          setStartDate((prev) => prev === savedStartDate ? prev : savedStartDate);
+          setShiftDays((prev) => prev === days ? prev : days);
           
           const datesResponse = await shiftApi.getDates(new Date(savedStartDate), days);
-          if (!isSubscribed) return;
-
-          if (datesResponse.success && datesResponse.data) {
+          if (isSubscribed && datesResponse.success && datesResponse.data) {
             setDates(datesResponse.data as string[]);
           }
-        } else {
+        } else if (isSubscribed) {
           const datesResponse = await shiftApi.getDates();
-          if (!isSubscribed) return;
-
-          if (datesResponse.success && datesResponse.data) {
+          if (isSubscribed && datesResponse.success && datesResponse.data) {
             setDates(datesResponse.data as string[]);
           }
         }
         
-        const staffResponse = await staffApi.getStaffList(group.groupId);
-        if (!isSubscribed) return;
-
-        if (staffResponse.success && staffResponse.data) {
+        // スタッフデータの処理
+        if (isSubscribed && staffResponse.success && staffResponse.data) {
           console.log('スタッフデータ取得成功:', staffResponse.data);
-          // スタッフデータと確定状態を一度に取得
+          
+          // スタッフデータと確定状態を処理
+          const staffArray = Array.isArray(staffResponse.data) ? staffResponse.data : [staffResponse.data];
+          
+          // 各スタッフの確定状態を並列に取得
           const staffWithConfirmation = await Promise.all(
-            (Array.isArray(staffResponse.data) ? staffResponse.data : [staffResponse.data]).map(async (staff) => {
+            staffArray.map(async (staff) => {
               const staffId = staff.staff_id || staff.id;
               if (!staffId) {
                 console.error('スタッフIDが見つかりません:', staff);
@@ -120,7 +120,7 @@ export default function AdminPage() {
             console.log('処理済みスタッフデータ:', staffWithConfirmation);
             setStaffData(staffWithConfirmation);
           }
-        } else {
+        } else if (isSubscribed) {
           console.warn('スタッフデータの取得に失敗:', staffResponse.error);
         }
       } catch (error: unknown) {
@@ -140,7 +140,7 @@ export default function AdminPage() {
     return () => {
       isSubscribed = false;
     };
-  }, [group, shiftApi, staffApi]);
+  }, [group?.groupId]); // 依存配列からAPIインスタンスを削除
   
   // 日付範囲を保存
   const handleSaveDateRange = async () => {
@@ -325,7 +325,8 @@ export default function AdminPage() {
   // 6週間以上前のデータを自動的に削除
   useEffect(() => {
     let isSubscribed = true;
-    let interval: NodeJS.Timeout;
+    let interval: NodeJS.Timeout | null = null;
+    let initialTimeout: NodeJS.Timeout | null = null;
 
     const cleanupOldData = async () => {
       if (!group?.groupId || !isSubscribed) return;
@@ -345,19 +346,28 @@ export default function AdminPage() {
       }
     };
 
-    // 初回実行（1分後に実行）
-    const initialTimeout = setTimeout(() => {
-      cleanupOldData();
-      // その後24時間ごとに実行
-      interval = setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
-    }, 60 * 1000);
+    if (group?.groupId && isSubscribed) {
+      // 初回実行（10分後に実行）- 即時実行すると起動時の負荷が高くなる可能性があるため遅延
+      initialTimeout = setTimeout(() => {
+        if (isSubscribed) {
+          console.log('古いシフトデータの初回クリーンアップを実行します');
+          cleanupOldData();
+          
+          // その後24時間ごとに実行
+          interval = setInterval(() => {
+            if (isSubscribed) {
+              console.log('古いシフトデータの定期クリーンアップを実行します');
+              cleanupOldData();
+            }
+          }, 24 * 60 * 60 * 1000); // 24時間ごと
+        }
+      }, 10 * 60 * 1000); // 10分後
+    }
 
     return () => {
       isSubscribed = false;
-      clearTimeout(initialTimeout);
-      if (interval) {
-        clearInterval(interval);
-      }
+      if (initialTimeout) clearTimeout(initialTimeout);
+      if (interval) clearInterval(interval);
     };
   }, [group?.groupId]); // shiftApiを依存配列から削除
   

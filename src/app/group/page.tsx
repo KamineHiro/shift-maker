@@ -44,72 +44,92 @@ export default function GroupPage() {
   
   // 初期データの読み込み
   useEffect(() => {
+    let isSubscribed = true;
+    if (!group?.groupId) return;
+
     const fetchInitialData = async () => {
-      if (!group) return;
-      
       try {
         setLoading(true);
         setError(null);
-        
-        // 日付範囲を取得
-        // まずはデータベースから日付範囲を取得
-        const dateRangeResponse = await shiftApi.getDateRange(group.groupId);
-        
-        if (dateRangeResponse.success && dateRangeResponse.data) {
+
+        // 日付範囲とスタッフ一覧を並列で取得
+        const [dateRangeResponse, staffResponse] = await Promise.all([
+          shiftApi.getDateRange(group.groupId),
+          staffApi.getStaffList()
+        ]);
+
+        // 日付データの処理
+        if (isSubscribed && dateRangeResponse.success && dateRangeResponse.data) {
           // 保存された日付範囲を使用
           const { startDate: savedStartDate, days } = dateRangeResponse.data;
           const datesResponse = await shiftApi.getDates(new Date(savedStartDate), days);
-          if (datesResponse.success && Array.isArray(datesResponse.data)) {
+          if (isSubscribed && datesResponse.success && Array.isArray(datesResponse.data)) {
             setDates(datesResponse.data);
           }
-        } else {
+        } else if (isSubscribed) {
           // 保存された日付範囲がない場合はデフォルト値を使用
           const datesResponse = await shiftApi.getDates();
-          if (datesResponse.success && Array.isArray(datesResponse.data)) {
+          if (isSubscribed && datesResponse.success && Array.isArray(datesResponse.data)) {
             setDates(datesResponse.data);
           }
         }
-        
-        // スタッフ一覧を取得
-        const staffResponse = await staffApi.getStaffList();
-        if (staffResponse.success && Array.isArray(staffResponse.data)) {
+
+        // スタッフデータの処理
+        if (isSubscribed && staffResponse.success && Array.isArray(staffResponse.data)) {
           setExistingStaff(staffResponse.data);
         }
-        
+
         // ローカルストレージからスタッフ情報を取得
-        const storedStaffId = localStorage.getItem(`staffId_${group.groupId}`);
-        const storedStaffName = localStorage.getItem(`staffName_${group.groupId}`);
-        
-        if (storedStaffId && storedStaffName) {
-          setStaffId(storedStaffId);
-          setStaffName(storedStaffName);
+        if (isSubscribed) {
+          const storedStaffId = localStorage.getItem(`staffId_${group.groupId}`);
+          const storedStaffName = localStorage.getItem(`staffName_${group.groupId}`);
           
-          const confirmResponse = await shiftApi.getShiftConfirmation(storedStaffId);
-          if (confirmResponse.success && confirmResponse.data) {
-            setIsShiftConfirmed(confirmResponse.data.isConfirmed);
-            localStorage.setItem(`shiftConfirmed_${group.groupId}_${storedStaffId}_individual`, 
-              confirmResponse.data.isConfirmed ? 'true' : 'false');
+          if (storedStaffId && storedStaffName) {
+            // 現在の値と異なる場合のみ更新
+            setStaffId((prev) => (prev === storedStaffId ? prev : storedStaffId));
+            setStaffName((prev) => (prev === storedStaffName ? prev : storedStaffName));
+            
+            // 確定状態とシフトデータを並列で取得
+            const [confirmResponse, shiftsResponse] = await Promise.all([
+              shiftApi.getShiftConfirmation(storedStaffId),
+              shiftApi.getStaffShifts(storedStaffId)
+            ]);
+            
+            if (isSubscribed && confirmResponse.success && confirmResponse.data) {
+              setIsShiftConfirmed(confirmResponse.data.isConfirmed);
+              localStorage.setItem(`shiftConfirmed_${group.groupId}_${storedStaffId}_individual`, 
+                confirmResponse.data.isConfirmed ? 'true' : 'false');
+            }
+            
+            if (isSubscribed && shiftsResponse.success && shiftsResponse.data) {
+              setShifts(shiftsResponse.data);
+            }
+            
+            if (isSubscribed) {
+              setShowStaffSelection(false);
+            }
           }
-          
-          const shiftsResponse = await shiftApi.getStaffShifts(storedStaffId);
-          if (shiftsResponse.success && shiftsResponse.data) {
-            setShifts(shiftsResponse.data);
-          }
-          
-          setShowStaffSelection(false);
         }
         
-        setLoading(false);
+        if (isSubscribed) {
+          setLoading(false);
+        }
       } catch (error) {
-        const apiError = error as ApiError;
-        setError(apiError.message || 'データの読み込みに失敗しました');
-        console.error('データ読み込みエラー:', apiError);
-        setLoading(false);
+        if (isSubscribed) {
+          const apiError = error as ApiError;
+          setError(apiError.message || 'データの読み込みに失敗しました');
+          console.error('データ読み込みエラー:', apiError);
+          setLoading(false);
+        }
       }
     };
     
     fetchInitialData();
-  }, [group?.groupId, shiftApi]); // shiftApiを依存配列に追加
+    
+    return () => {
+      isSubscribed = false;
+    };
+  }, [group?.groupId]); // shiftApiとstaffApiを依存配列から削除
   
   // 既存のスタッフを選択
   const handleSelectExistingStaff = async () => {
