@@ -10,9 +10,10 @@ export async function GET() {
     
     return NextResponse.json(response);
   } catch (error) {
+    console.error('日付データの取得エラー:', error);
     const response: ApiResponse<null> = {
       success: false,
-      error: '日付データの取得に失敗しました'
+      error: error instanceof Error ? error.message : '日付データの取得に失敗しました'
     };
     
     return NextResponse.json(response, { status: 500 });

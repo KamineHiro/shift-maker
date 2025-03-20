@@ -21,7 +21,7 @@ export const groupService = {
           admin_password: adminPassword // 管理者パスワードを保存
         }])
         .select()
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       if (!data) throw new Error('グループの作成に失敗しました');
@@ -46,7 +46,7 @@ export const groupService = {
         .from('groups')
         .select('id, name, access_key')
         .eq('access_key', accessKey)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       if (!data) throw new Error('グループが見つかりませんでした');
@@ -70,7 +70,7 @@ export const groupService = {
         .from('groups')
         .select('id, name, access_key, admin_key')
         .eq('admin_key', adminKey)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       if (!data) throw new Error('グループが見つかりませんでした');

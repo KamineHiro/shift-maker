@@ -7,7 +7,12 @@ import { useShiftApi, useStaffApi } from '@/hooks/useApi';
 import { ShiftData, ShiftInfo } from '@/types';
 import { formatDisplayDate } from '@/utils/helpers';
 import ShiftModal from '@/components/ShiftModal';
-import { supabase } from '@/lib/supabase';
+
+// APIエラー型の定義
+interface ApiError {
+  message: string;
+  status?: number;
+}
 
 export default function GroupPage() {
   const router = useRouter();
@@ -25,9 +30,6 @@ export default function GroupPage() {
   const [staffId, setStaffId] = useState<string | null>(null);
   const [existingStaff, setExistingStaff] = useState<ShiftData[]>([]);
   const [selectedExistingStaffId, setSelectedExistingStaffId] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [shiftDays, setShiftDays] = useState<number>(14);
-  const [showDateSettings, setShowDateSettings] = useState(false);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [isShiftConfirmed, setIsShiftConfirmed] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -49,30 +51,29 @@ export default function GroupPage() {
         setLoading(true);
         setError(null);
         
-        // グループの日付範囲を取得
+        // 日付範囲を取得
+        // まずはデータベースから日付範囲を取得
         const dateRangeResponse = await shiftApi.getDateRange(group.groupId);
+        
         if (dateRangeResponse.success && dateRangeResponse.data) {
+          // 保存された日付範囲を使用
           const { startDate: savedStartDate, days } = dateRangeResponse.data;
-          setStartDate(savedStartDate);
-          setShiftDays(days);
-          
-          // 日付データの取得
           const datesResponse = await shiftApi.getDates(new Date(savedStartDate), days);
-          if (datesResponse.success && datesResponse.data) {
-            setDates(datesResponse.data as string[]);
+          if (datesResponse.success && Array.isArray(datesResponse.data)) {
+            setDates(datesResponse.data);
           }
         } else {
-          // デフォルトの日付データを取得
+          // 保存された日付範囲がない場合はデフォルト値を使用
           const datesResponse = await shiftApi.getDates();
-          if (datesResponse.success && datesResponse.data) {
-            setDates(datesResponse.data as string[]);
+          if (datesResponse.success && Array.isArray(datesResponse.data)) {
+            setDates(datesResponse.data);
           }
         }
         
-        // 既存のスタッフ一覧を取得
-        const staffResponse = await staffApi.getStaffList(group.groupId);
-        if (staffResponse.success && staffResponse.data) {
-          setExistingStaff(Array.isArray(staffResponse.data) ? staffResponse.data : [staffResponse.data]);
+        // スタッフ一覧を取得
+        const staffResponse = await staffApi.getStaffList();
+        if (staffResponse.success && Array.isArray(staffResponse.data)) {
+          setExistingStaff(staffResponse.data);
         }
         
         // ローカルストレージからスタッフ情報を取得
@@ -83,39 +84,32 @@ export default function GroupPage() {
           setStaffId(storedStaffId);
           setStaffName(storedStaffName);
           
-          // シフト確定状態を取得
           const confirmResponse = await shiftApi.getShiftConfirmation(storedStaffId);
           if (confirmResponse.success && confirmResponse.data) {
             setIsShiftConfirmed(confirmResponse.data.isConfirmed);
-            console.log('シフト確定状態を取得しました:', confirmResponse.data.isConfirmed);
-            
-            // ローカルストレージにも保存して他の画面で参照できるようにする
-            // これはデータベース同期のバックアップとしての役割のみ
             localStorage.setItem(`shiftConfirmed_${group.groupId}_${storedStaffId}_individual`, 
               confirmResponse.data.isConfirmed ? 'true' : 'false');
           }
           
-          // スタッフのシフトデータを取得
           const shiftsResponse = await shiftApi.getStaffShifts(storedStaffId);
           if (shiftsResponse.success && shiftsResponse.data) {
-            console.log('シフトデータを取得しました:', shiftsResponse.data);
-            setShifts(shiftsResponse.data as Record<string, ShiftInfo>);
+            setShifts(shiftsResponse.data);
           }
           
-          // 常に最初はスタッフ選択画面を表示するため、ここではフラグを変更しない
-          setShowStaffSelection(true);
+          setShowStaffSelection(false);
         }
         
         setLoading(false);
-      } catch (err) {
-        setError('データの読み込みに失敗しました');
+      } catch (error) {
+        const apiError = error as ApiError;
+        setError(apiError.message || 'データの読み込みに失敗しました');
+        console.error('データ読み込みエラー:', apiError);
         setLoading(false);
       }
     };
     
     fetchInitialData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.groupId]);
+  }, [group?.groupId, shiftApi]); // shiftApiを依存配列に追加
   
   // 既存のスタッフを選択
   const handleSelectExistingStaff = async () => {
@@ -125,16 +119,11 @@ export default function GroupPage() {
       setLoading(true);
       setError(null);
       
-      console.log('スタッフ選択 - 選択されたID:', selectedExistingStaffId);
-      
-      // 選択したスタッフの情報を取得
       const response = await staffApi.getStaff(selectedExistingStaffId);
-      console.log('スタッフ取得応答:', response);
       
       if (response.success && response.data) {
         const staffData = response.data as ShiftData;
         
-        // データベースのスタッフID（プライマリーキー）を使用
         let actualStaffId = '';
         if (staffData.id) {
           actualStaffId = staffData.id;
@@ -146,51 +135,38 @@ export default function GroupPage() {
           return;
         }
         
-        console.log('使用するスタッフID:', actualStaffId);
-        
         setStaffId(actualStaffId);
         setStaffName(staffData.name);
         
-        // ローカルストレージに保存
         localStorage.setItem(`staffId_${group.groupId}`, actualStaffId);
         localStorage.setItem(`staffName_${group.groupId}`, staffData.name);
         
-        // シフト確定状態を取得
         const confirmResponse = await shiftApi.getShiftConfirmation(actualStaffId);
-        console.log('シフト確定状態取得応答:', confirmResponse);
         
         if (confirmResponse.success && confirmResponse.data) {
           setIsShiftConfirmed(confirmResponse.data.isConfirmed);
-          console.log('確定状態設定:', confirmResponse.data.isConfirmed);
-          
-          // バックアップとしてローカルストレージにも保存
           localStorage.setItem(`shiftConfirmed_${group.groupId}_${actualStaffId}_individual`, 
             confirmResponse.data.isConfirmed ? 'true' : 'false');
         } else {
           setIsShiftConfirmed(false);
-          console.log('確定状態取得に失敗したため、デフォルトでfalseを設定');
         }
         
-        // シフトデータを取得
         const shiftsResponse = await shiftApi.getStaffShifts(actualStaffId);
-        console.log('シフトデータ取得応答:', shiftsResponse);
         
         if (shiftsResponse.success && shiftsResponse.data) {
           setShifts(shiftsResponse.data as Record<string, ShiftInfo>);
-          console.log('シフトデータ設定:', shiftsResponse.data);
         } else {
           setShifts({});
-          console.log('シフトデータが取得できなかったため、空のオブジェクトを設定');
         }
         
-        // スタッフ選択後にシフト入力画面に切り替え
         setShowStaffSelection(false);
       } else {
         setError(response.error || 'スタッフの取得に失敗しました');
       }
-    } catch (err: any) {
-      console.error('スタッフ選択エラー:', err);
-      setError(err?.message || 'スタッフの取得中にエラーが発生しました');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('スタッフ選択エラー:', apiError);
+      setError(apiError.message || 'スタッフの取得中にエラーが発生しました');
     } finally {
       setLoading(false);
     }
@@ -210,19 +186,15 @@ export default function GroupPage() {
       setLoading(true);
       setError(null);
       
-      // 完全なシフト情報を作成（staff_idとdateを追加）
       const completeShiftInfo: ShiftInfo = {
         ...shiftInfo,
         staff_id: staffId,
         date: selectedDate
       };
       
-      console.log('シフト更新を開始します:', { staffId, selectedDate, completeShiftInfo });
       const result = await shiftApi.updateShift(staffId, selectedDate, completeShiftInfo);
       
       if (result) {
-        console.log('シフト更新が成功しました:', result);
-        // 成功したら、ローカルの状態も更新
         setShifts(prev => ({
           ...prev,
           [selectedDate]: {
@@ -234,67 +206,13 @@ export default function GroupPage() {
         
         setModalOpen(false);
       } else {
-        console.error('シフト更新に失敗しました');
         setError('シフトの更新に失敗しました');
       }
-    } catch (err: any) {
-      console.error('シフト更新エラー:', err);
-      setError(err?.message || 'シフトの更新中にエラーが発生しました');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('シフト更新エラー:', apiError);
+      setError(apiError.message || 'シフトの更新中にエラーが発生しました');
     } finally {
-      setLoading(false);
-    }
-  };
-  
-  // シフト状態に応じたスタイルとテキストを取得
-  const getShiftDisplay = (shift?: ShiftInfo) => {
-    if (!shift) {
-      return {
-        text: '未設定',
-        bgColor: 'bg-gray-100',
-        textColor: 'text-gray-500'
-      };
-    }
-    
-    if (shift.isWorking) {
-      return {
-        text: `${shift.startTime} - ${shift.endTime}`,
-        bgColor: 'bg-green-100',
-        textColor: 'text-green-800'
-      };
-    } else {
-      return {
-        text: '休み',
-        bgColor: 'bg-red-100',
-        textColor: 'text-red-800'
-      };
-    }
-  };
-  
-  // 日付範囲を保存
-  const handleSaveDateRange = async () => {
-    if (!group) return;
-    
-    try {
-      setLoading(true);
-      
-      // 日付範囲を保存
-      const response = await shiftApi.saveDateRange(group.groupId, startDate, shiftDays);
-      
-      if (response.success) {
-        // 新しい日付データを取得
-        const datesResponse = await shiftApi.getDates(new Date(startDate), shiftDays);
-        if (datesResponse.success && datesResponse.data) {
-          setDates(datesResponse.data as string[]);
-        }
-        
-        setShowDateSettings(false);
-      } else {
-        setError(response.error || '日付範囲の保存に失敗しました');
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      setError('日付範囲の保存に失敗しました');
       setLoading(false);
     }
   };
@@ -334,7 +252,6 @@ export default function GroupPage() {
       if (response.success && response.data) {
         setIsShiftConfirmed(response.data.isConfirmed);
         
-        // ローカルストレージも更新（バックアップ）
         localStorage.setItem(`shiftConfirmed_${group.groupId}_${staffId}_individual`, 
           response.data.isConfirmed ? 'true' : 'false');
           
@@ -342,8 +259,10 @@ export default function GroupPage() {
       } else {
         setError(response.error || 'シフトの確定に失敗しました');
       }
-    } catch (err: any) {
-      setError(err?.message || 'シフトの確定中にエラーが発生しました');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      setError(apiError.message || 'シフトの確定中にエラーが発生しました');
+      console.error('シフト確定エラー:', apiError);
     } finally {
       setLoading(false);
     }
@@ -361,14 +280,15 @@ export default function GroupPage() {
       if (response.success && response.data) {
         setIsShiftConfirmed(response.data.isConfirmed);
         
-        // ローカルストレージも更新（バックアップ）
         localStorage.setItem(`shiftConfirmed_${group.groupId}_${staffId}_individual`, 
           response.data.isConfirmed ? 'true' : 'false');
       } else {
         setError(response.error || 'シフト確定の取り消しに失敗しました');
       }
-    } catch (err: any) {
-      setError(err?.message || 'シフト確定の取り消し中にエラーが発生しました');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      setError(apiError.message || 'シフト確定の取り消し中にエラーが発生しました');
+      console.error('シフト確定の取り消しエラー:', apiError);
     } finally {
       setLoading(false);
     }
@@ -555,13 +475,8 @@ export default function GroupPage() {
                       
                       if (shift) {
                         if (shift.isWorking) {
-                          if (shift.isAllDay) {
-                            cellContent = '全日OK';
-                            cellClass = 'bg-blue-100 text-blue-800';
-                          } else {
-                            cellContent = `${shift.startTime} - ${shift.endTime}`;
-                            cellClass = 'bg-green-100 text-green-800';
-                          }
+                          cellContent = `${shift.startTime} - ${shift.endTime}`;
+                          cellClass = 'bg-green-100 text-green-800';
                         } else {
                           cellContent = '休み';
                           cellClass = 'bg-red-100 text-red-800';

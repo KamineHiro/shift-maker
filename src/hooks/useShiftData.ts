@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { ShiftData, ShiftInfo, Staff, Shift } from '@/types';
+import { useState, useEffect, useCallback } from 'react';
+import { ShiftData, ShiftInfo } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
 
 export const useShiftData = () => {
   const [dates, setDates] = useState<string[]>([]);
@@ -18,13 +19,7 @@ export const useShiftData = () => {
     });
   };
 
-  useEffect(() => {
-    const weekDates = generateWeekDates(currentDate);
-    setDates(weekDates);
-    fetchStaffList(weekDates);
-  }, [currentDate]);
-
-  const fetchStaffList = async (targetDates: string[]) => {
+  const fetchStaffList = useCallback(async (targetDates: string[]) => {
     try {
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
@@ -32,53 +27,87 @@ export const useShiftData = () => {
 
       if (staffError) throw staffError;
 
-      const { data: shiftsData, error: shiftsError } = await supabase
-        .from('shifts')
-        .select('*')
-        .in('date', targetDates);
+      const staffWithShifts = await Promise.all(
+        staffData.map(async (staff) => {
+          const { data: shiftData, error: shiftError } = await supabase
+            .from('shifts')
+            .select('*')
+            .in('date', targetDates)
+            .eq('staff_id', staff.id);
 
-      if (shiftsError) throw shiftsError;
+          if (shiftError) throw shiftError;
 
-      const formattedStaffList: ShiftData[] = (staffData as Staff[]).map((staff) => ({
-        staff_id: staff.id,
-        name: staff.name,
-        shifts: (shiftsData as Shift[])
-          .filter((shift) => shift.staff_id === staff.id)
-          .reduce((acc: Record<string, ShiftInfo>, shift) => {
-            acc[shift.date] = {
-              staff_id: shift.staff_id,
-              date: shift.date,
-              isWorking: shift.is_working,
-              startTime: shift.start_time,
-              endTime: shift.end_time,
-              isAllDay: shift.is_all_day,
-              note: shift.note,
-            };
+          const shifts = shiftData.reduce((acc, shift) => {
+            acc[shift.date] = shift;
             return acc;
-          }, {}),
-      }));
+          }, {} as Record<string, ShiftInfo>);
 
-      setStaffList(formattedStaffList);
+          return {
+            staff_id: staff.id,
+            name: staff.name,
+            shifts
+          };
+        })
+      );
+
+      setStaffList(staffWithShifts);
     } catch (error) {
-      console.error('スタッフデータの取得エラー:', error);
+      console.error('スタッフリストの取得に失敗しました:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const weekDates = generateWeekDates(currentDate);
+    setDates(weekDates);
+    fetchStaffList(weekDates);
+  }, [currentDate, fetchStaffList]);
 
   const updateShift = async (shiftInfo: ShiftInfo) => {
     try {
-      const { error } = await supabase.from('shifts').upsert({
-        staff_id: shiftInfo.staff_id,
-        date: shiftInfo.date,
-        is_working: shiftInfo.isWorking,
-        start_time: shiftInfo.startTime,
-        end_time: shiftInfo.endTime,
-        is_all_day: shiftInfo.isAllDay,
-        note: shiftInfo.note,
-      });
+      const { data: existingShift, error: checkError } = await supabase
+        .from('shifts')
+        .select('*')
+        .eq('staff_id', shiftInfo.staff_id)
+        .eq('date', shiftInfo.date)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('シフト存在確認エラー:', checkError);
+        throw checkError;
+      }
+
+      let error;
+      if (existingShift) {
+        const { error: updateError } = await supabase
+          .from('shifts')
+          .update({
+            start_time: shiftInfo.startTime,
+            end_time: shiftInfo.endTime,
+            note: shiftInfo.note,
+            is_off: !shiftInfo.isWorking
+          })
+          .eq('staff_id', shiftInfo.staff_id)
+          .eq('date', shiftInfo.date);
+        
+        error = updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('shifts')
+          .insert({
+            id: uuidv4(),
+            staff_id: shiftInfo.staff_id,
+            date: shiftInfo.date,
+            start_time: shiftInfo.startTime,
+            end_time: shiftInfo.endTime,
+            note: shiftInfo.note,
+            is_off: !shiftInfo.isWorking
+          });
+        
+        error = insertError;
+      }
 
       if (error) throw error;
 
-      // 更新後にデータを再取得
       await fetchStaffList(dates);
     } catch (error) {
       console.error('シフト更新エラー:', error);

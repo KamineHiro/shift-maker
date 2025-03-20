@@ -6,7 +6,7 @@ import { useGroup } from '@/contexts/GroupContext';
 
 export default function Home() {
   const router = useRouter();
-  const { group, loading, error, accessGroup, accessAdminGroup, createGroup, clearError } = useGroup();
+  const { group, error, accessGroup, accessAdminGroup, createGroup, clearError } = useGroup();
   
   const [activeTab, setActiveTab] = useState<'access' | 'create' | 'admin'>('access');
   const [accessKey, setAccessKey] = useState('');
@@ -34,11 +34,14 @@ export default function Home() {
   // グループ情報に基づいてリダイレクト
   useEffect(() => {
     if (group && !createdAdminKey) {
-      if (group.isAdmin) {
-        router.push('/admin');
-      } else {
-        router.push('/group');
-      }
+      const redirect = async () => {
+        if (group.isAdmin) {
+          await router.push('/admin');
+        } else {
+          await router.push('/group');
+        }
+      };
+      redirect();
     }
   }, [group, createdAdminKey, router]);
   

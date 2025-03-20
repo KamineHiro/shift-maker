@@ -129,7 +129,7 @@ export const staffService = {
           user_id: user?.id || null
         }])
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (!data) throw new Error('スタッフの追加に失敗しました');
@@ -153,7 +153,7 @@ export const staffService = {
         .update({ name })
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (!data) throw new Error('スタッフの更新に失敗しました');
@@ -265,7 +265,7 @@ export const shiftService = {
         .from('groups')
         .select('shift_start_date, shift_days')
         .eq('id', groupId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (!data) return null;
@@ -288,21 +288,18 @@ export const shiftService = {
         .select('*')
         .eq('staff_id', staffId)
         .eq('date', date)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error; // PGRST116: 結果が見つからない
       if (!data) return null;
 
-      // 全日OKの判定（noteフィールドに特定の文字列があるか確認）
-      const isAllDay = data.note?.includes('[全日OK]') || false;
-      const cleanNote = data.note ? data.note.replace('[全日OK]', '').trim() : '';
+      const cleanNote = data.note ? data.note.trim() : '';
 
       return {
         startTime: data.start_time || '',
         endTime: data.end_time || '',
         isWorking: !data.is_off,
-        note: cleanNote,
-        isAllDay: data.note?.includes('[全日OK]') || false
+        note: cleanNote
       } as ShiftInfo;
     } catch (error) {
       console.error('シフト情報の取得に失敗しました:', error);
@@ -311,68 +308,63 @@ export const shiftService = {
   },
 
   // シフト情報を更新または作成
-  async updateShift(staffId: string, date: string, shiftInfo: ShiftInfo): Promise<ShiftInfo> {
+  async updateShift(shiftInfo: ShiftInfo): Promise<ShiftInfo | null> {
     try {
-      // デバッグ情報
-      console.log('シフト更新呼び出し:', { staffId, date, shiftInfo });
-      
-      // UUID形式のバリデーション
-      if (!isUUID(staffId)) {
-        throw new Error(`無効なスタッフID形式: ${staffId}`);
-      }
-      
-      // スタッフが存在するか確認
-      const { data: staff, error: staffError } = await supabase
-        .from('staff')
-        .select('id')
-        .eq('id', staffId)
-        .single();
-        
-      if (staffError || !staff) {
-        throw new Error(`スタッフが存在しません (ID: ${staffId})`);
-      }
-      
-      // 全日OKの場合はnoteフィールドに特定の文字列を追加
-      const noteWithAllDay = shiftInfo.isAllDay 
-        ? `[全日OK]${shiftInfo.note || ''}`
-        : shiftInfo.note;
+      const { startTime, endTime, note, isWorking } = shiftInfo;
 
-      const shiftData = {
-        start_time: shiftInfo.startTime || null,
-        end_time: shiftInfo.endTime || null,
-        is_off: !shiftInfo.isWorking,
-        note: noteWithAllDay || null
-      };
-
-      // UPSERTを使用してシフト情報を更新または作成
-      const { data: upsertedData, error: upsertError } = await supabase
+      // まずはシフトが存在するか確認
+      const { data: existingShift, error: checkError } = await supabase
         .from('shifts')
-        .upsert({
-          id: uuidv4(), // 新規作成時のみ使用
-          staff_id: staffId,
-          date,
-          ...shiftData
-        }, {
-          onConflict: 'staff_id,date',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single();
+        .select('*')
+        .eq('staff_id', shiftInfo.staff_id)
+        .eq('date', shiftInfo.date)
+        .maybeSingle();
 
-      if (upsertError) {
-        console.error('シフト更新/作成エラー:', upsertError);
-        throw upsertError;
+      if (checkError) {
+        console.error('シフト確認エラー:', checkError);
+        throw checkError;
       }
 
-      console.log('シフト更新/作成成功:', upsertedData);
+      let error;
+      if (existingShift) {
+        // 既存のシフトがある場合は更新
+        const { error: updateError } = await supabase
+          .from('shifts')
+          .update({
+            start_time: startTime,
+            end_time: endTime,
+            note,
+            is_off: !isWorking
+          })
+          .eq('staff_id', shiftInfo.staff_id)
+          .eq('date', shiftInfo.date);
+        
+        error = updateError;
+      } else {
+        // 新規シフトの場合は挿入
+        const { error: insertError } = await supabase
+          .from('shifts')
+          .insert({
+            id: uuidv4(),
+            staff_id: shiftInfo.staff_id,
+            date: shiftInfo.date,
+            start_time: startTime,
+            end_time: endTime,
+            note,
+            is_off: !isWorking
+          });
+        
+        error = insertError;
+      }
 
-      return {
-        ...shiftInfo,
-        staff_id: staffId,
-        date: date
-      };
+      if (error) {
+        console.error('シフト更新エラー:', error);
+        throw error;
+      }
+
+      return shiftInfo;
     } catch (error) {
-      console.error('シフト情報の更新に失敗しました:', error);
+      console.error('シフト更新エラー:', error);
       throw error;
     }
   },
@@ -407,9 +399,7 @@ export const shiftService = {
       const shiftsRecord: Record<string, ShiftInfo> = {};
       if (data) {
         data.forEach((shift) => {
-          // 全日OKの判定（noteフィールドに特定の文字列があるか確認）
-          const isAllDay = shift.note?.includes('[全日OK]') || false;
-          const cleanNote = shift.note ? shift.note.replace('[全日OK]', '').trim() : '';
+          const cleanNote = shift.note ? shift.note.trim() : '';
           
           shiftsRecord[shift.date] = {
             staff_id: staffId,
@@ -417,8 +407,7 @@ export const shiftService = {
             isWorking: !shift.is_off,
             startTime: shift.start_time || '',
             endTime: shift.end_time || '',
-            note: cleanNote,
-            isAllDay: isAllDay
+            note: cleanNote
           } as ShiftInfo;
         });
       }
@@ -467,6 +456,71 @@ export const shiftService = {
         error: '古いシフトデータの削除に失敗しました',
         message: error instanceof Error ? error.message : '不明なエラーが発生しました'
       };
+    }
+  },
+
+  // シフト確定状態を取得
+  async getShiftConfirmation(staffId: string): Promise<{ success: boolean; data?: { isConfirmed: boolean }; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('is_shift_confirmed')
+        .eq('id', staffId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: { isConfirmed: data?.is_shift_confirmed ?? false }
+      };
+    } catch (error) {
+      console.error('シフト確定状態の取得に失敗しました:', error);
+      return { success: false, error: '確定状態の取得に失敗しました' };
+    }
+  },
+
+  // シフトを確定
+  async confirmShift(staffId: string): Promise<{ success: boolean; data?: { isConfirmed: boolean }; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .update({ is_shift_confirmed: true })
+        .eq('id', staffId)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: { isConfirmed: data?.is_shift_confirmed ?? true }
+      };
+    } catch (error) {
+      console.error('シフト確定に失敗しました:', error);
+      return { success: false, error: 'シフト確定に失敗しました' };
+    }
+  },
+
+  // シフト確定を解除
+  async unconfirmShift(staffId: string): Promise<{ success: boolean; data?: { isConfirmed: boolean }; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .update({ is_shift_confirmed: false })
+        .eq('id', staffId)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: { isConfirmed: data?.is_shift_confirmed ?? false }
+      };
+    } catch (error) {
+      console.error('シフト確定解除に失敗しました:', error);
+      return { success: false, error: 'シフト確定解除に失敗しました' };
     }
   },
 }; 

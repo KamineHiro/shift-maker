@@ -1,17 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, ShiftData } from '@/types';
 import { staffService } from '@/services/supabaseService';
 
 interface RouteParams {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>; // ✅ `params` を `Promise` で取得
 }
 
 // GET: 特定のスタッフを取得
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(request: NextRequest, context: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await context.params; // ✅ `await` で `params` を取得
     
     const staffResult = await staffService.getStaff(id);
     
@@ -31,9 +29,10 @@ export async function GET(request: Request, { params }: RouteParams) {
     
     return NextResponse.json(response);
   } catch (error) {
+    console.error('スタッフデータの取得エラー:', error);
     const response: ApiResponse<null> = {
       success: false,
-      error: 'スタッフデータの取得に失敗しました'
+      error: error instanceof Error ? error.message : 'スタッフデータの取得に失敗しました'
     };
     
     return NextResponse.json(response, { status: 500 });
@@ -41,9 +40,9 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 // PUT: スタッフ情報を更新
-export async function PUT(request: Request, { params }: RouteParams) {
+export async function PUT(request: NextRequest, context: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await context.params; // ✅ `await` で `params` を取得
     const { name } = await request.json();
     
     if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -54,14 +53,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
     
     return NextResponse.json({ success: true, data: updatedStaff });
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'スタッフ情報の更新に失敗しました' }, { status: 500 });
+    console.error('スタッフ情報の更新エラー:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'スタッフ情報の更新に失敗しました' 
+    }, { status: 500 });
   }
 }
 
 // DELETE: スタッフを削除
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, context: RouteParams) {
   try {
-    const { id } = params;
+    const { id } = await context.params; // ✅ `await` で `params` を取得
     
     // 削除前にスタッフデータを取得
     const staff = await staffService.getStaff(id);
@@ -73,6 +76,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     
     return NextResponse.json({ success: true, data: staff });
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'スタッフの削除に失敗しました' }, { status: 500 });
+    console.error('スタッフの削除エラー:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'スタッフの削除に失敗しました' 
+    }, { status: 500 });
   }
-} 
+}

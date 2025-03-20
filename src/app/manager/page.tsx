@@ -9,6 +9,12 @@ import { useStaffApi, useShiftApi } from '@/hooks/useApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { ShiftData, ShiftInfo } from '@/types';
 
+// APIエラー型の定義
+interface ApiError {
+  message: string;
+  status?: number;
+}
+
 export default function ManagerPage() {
   const { user, signOut } = useAuth();
   
@@ -32,27 +38,27 @@ export default function ManagerPage() {
         setLoading(true);
         setError(null);
         
-        // 日付データの取得
         const datesResponse = await shiftApi.getDates();
         if (datesResponse.success && datesResponse.data) {
           setDates(datesResponse.data as string[]);
         }
         
-        // スタッフデータの取得
         const staffResponse = await staffApi.getStaffList();
         if (staffResponse.success && staffResponse.data) {
           setStaffData(staffResponse.data as ShiftData[]);
         }
         
         setLoading(false);
-      } catch (err) {
-        setError('データの読み込みに失敗しました');
+      } catch (error: unknown) {
+        const apiError = error as ApiError;
+        setError(apiError.message || 'データの読み込みに失敗しました');
+        console.error('データ読み込みエラー:', apiError);
         setLoading(false);
       }
     };
     
     fetchInitialData();
-  }, []);
+  }, [shiftApi, staffApi]);
 
   // シフトセルがクリックされたときの処理
   const handleCellClick = (staffId: string, date: string) => {
@@ -72,7 +78,6 @@ export default function ManagerPage() {
       const response = await shiftApi.updateShift(selectedStaff.id, selectedDate, shiftInfo);
       
       if (response) {
-        // 成功したら、ローカルの状態も更新
         setStaffData(prevData => 
           prevData.map(staff => {
             if (staff.staff_id === selectedStaff.id) {
@@ -90,11 +95,12 @@ export default function ManagerPage() {
         
         setModalOpen(false);
       } else {
-        // エラーメッセージを表示
         setError('シフトの更新に失敗しました');
       }
-    } catch (err: any) {
-      setError(err?.message || 'シフトの更新中にエラーが発生しました');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      setError(apiError.message || 'シフトの更新中にエラーが発生しました');
+      console.error('シフト更新エラー:', apiError);
     }
   };
 
@@ -104,14 +110,14 @@ export default function ManagerPage() {
       const response = await staffApi.addStaff(name);
       
       if (response.success && response.data) {
-        // 成功したら、ローカルの状態も更新
         setStaffData(prev => [...prev, response.data as ShiftData]);
       } else {
-        // エラーメッセージを表示
         setError(response.error || 'スタッフの追加に失敗しました');
       }
-    } catch (err) {
-      setError('スタッフの追加中にエラーが発生しました');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      setError(apiError.message || 'スタッフの追加中にエラーが発生しました');
+      console.error('スタッフ追加エラー:', apiError);
     }
   };
 
@@ -123,14 +129,14 @@ export default function ManagerPage() {
       const response = await staffApi.deleteStaff(staffId);
       
       if (response.success) {
-        // 成功したら、ローカルの状態も更新
         setStaffData(prev => prev.filter(staff => staff.staff_id !== staffId));
       } else {
-        // エラーメッセージを表示
         setError(response.error || 'スタッフの削除に失敗しました');
       }
-    } catch (err) {
-      setError('スタッフの削除中にエラーが発生しました');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      setError(apiError.message || 'スタッフの削除中にエラーが発生しました');
+      console.error('スタッフ削除エラー:', apiError);
     }
   };
 

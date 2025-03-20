@@ -34,8 +34,12 @@ export function formatDate(date: Date): string {
  * @returns MM/DD形式の日付文字列
  */
 export function formatDisplayDate(dateString: string): string {
-  const [year, month, day] = dateString.split('-');
-  return `${parseInt(month)}/${parseInt(day)}`;
+  const date = new Date(dateString);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+  
+  return `${month}/${day}(${dayOfWeek})`;
 }
 
 /**

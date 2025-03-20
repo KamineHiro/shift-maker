@@ -13,6 +13,12 @@ interface ExtendedShiftData extends ShiftData {
   isConfirmed?: boolean;
 }
 
+// エラー型の定義を追加
+interface ApiError {
+  message: string;
+  status?: number;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const { group, leaveGroup } = useGroup();
@@ -37,9 +43,15 @@ export default function AdminPage() {
   // グループ情報がない場合、または管理者でない場合はトップページにリダイレクト
   useEffect(() => {
     if (!group) {
-      router.push('/');
+      const redirect = async () => {
+        await router.push('/');
+      };
+      redirect();
     } else if (!group.isAdmin) {
-      router.push('/group');
+      const redirect = async () => {
+        await router.push('/group');
+      };
+      redirect();
     }
   }, [group, router]);
   
@@ -51,12 +63,10 @@ export default function AdminPage() {
       if (!group) return;
       
       try {
-        // エラー状態をリセット
         if (isSubscribed) {
           setError(null);
         }
         
-        // グループの日付範囲を取得
         const dateRangeResponse = await shiftApi.getDateRange(group.groupId);
         if (!isSubscribed) return;
 
@@ -65,7 +75,6 @@ export default function AdminPage() {
           setStartDate(savedStartDate);
           setShiftDays(days);
           
-          // 日付データの取得
           const datesResponse = await shiftApi.getDates(new Date(savedStartDate), days);
           if (!isSubscribed) return;
 
@@ -73,7 +82,6 @@ export default function AdminPage() {
             setDates(datesResponse.data as string[]);
           }
         } else {
-          // デフォルトの日付データを取得
           const datesResponse = await shiftApi.getDates();
           if (!isSubscribed) return;
 
@@ -82,40 +90,43 @@ export default function AdminPage() {
           }
         }
         
-        // スタッフデータの取得
         const staffResponse = await staffApi.getStaffList(group.groupId);
         if (!isSubscribed) return;
 
         if (staffResponse.success && staffResponse.data) {
-          const staffList = staffResponse.data as ShiftData[];
-          
-          // 各スタッフの確定状態をAPIから取得
-          const extendedStaffList = await Promise.all(staffList.map(async staff => {
-            // APIを使用して確定状態を取得する
-            const confirmResponse = await shiftApi.getShiftConfirmation(staff.staff_id);
-            const isConfirmed = confirmResponse.success && confirmResponse.data 
-              ? confirmResponse.data.isConfirmed 
-              : false;
+          console.log('スタッフデータ取得成功:', staffResponse.data);
+          // スタッフデータと確定状態を一度に取得
+          const staffWithConfirmation = await Promise.all(
+            (Array.isArray(staffResponse.data) ? staffResponse.data : [staffResponse.data]).map(async (staff) => {
+              const staffId = staff.staff_id || staff.id;
+              if (!staffId) {
+                console.error('スタッフIDが見つかりません:', staff);
+                return staff;
+              }
               
-            // 各スタッフのシフト情報を改めて取得
-            const shiftsResponse = await shiftApi.getStaffShifts(staff.staff_id);
-            const shifts = shiftsResponse.success && shiftsResponse.data 
-              ? shiftsResponse.data 
-              : staff.shifts || {};
-              
-            return {
-              ...staff,
-              shifts,
-              isConfirmed
-            };
-          }));
+              console.log(`確定状態を取得中 - スタッフID: ${staffId}`);
+              const confirmResponse = await shiftApi.getShiftConfirmation(staffId);
+              return {
+                ...staff,
+                staff_id: staffId, // staff_idを確実に設定
+                isConfirmed: confirmResponse.success && confirmResponse.data 
+                  ? confirmResponse.data.isConfirmed 
+                  : false
+              };
+            })
+          );
           
-          setStaffData(extendedStaffList);
+          if (isSubscribed) {
+            console.log('処理済みスタッフデータ:', staffWithConfirmation);
+            setStaffData(staffWithConfirmation);
+          }
+        } else {
+          console.warn('スタッフデータの取得に失敗:', staffResponse.error);
         }
-      } catch (err) {
+      } catch (error: unknown) {
         if (isSubscribed) {
+          console.error('データ読み込みエラー:', error);
           setError('データの読み込みに失敗しました');
-          console.error('データ読み込みエラー:', err);
         }
       } finally {
         if (isSubscribed) {
@@ -123,14 +134,13 @@ export default function AdminPage() {
         }
       }
     };
-    
-    setLoading(true);
+
     fetchInitialData();
 
     return () => {
       isSubscribed = false;
     };
-  }, [group?.groupId]);  // shiftApiとstaffApiは依存関係から除外
+  }, [group, shiftApi, staffApi]);
   
   // 日付範囲を保存
   const handleSaveDateRange = async () => {
@@ -139,10 +149,8 @@ export default function AdminPage() {
     try {
       setLoading(true);
       
-      // 日付範囲を保存
       await shiftApi.saveDateRange(group.groupId, startDate, shiftDays);
       
-      // 新しい日付データを取得
       const datesResponse = await shiftApi.getDates(new Date(startDate), shiftDays);
       if (datesResponse.success && datesResponse.data) {
         setDates(datesResponse.data as string[]);
@@ -150,7 +158,8 @@ export default function AdminPage() {
       
       setShowDateSettings(false);
       setLoading(false);
-    } catch (err) {
+    } catch (error) {
+      console.error('日付範囲の保存エラー:', error);
       setError('日付範囲の保存に失敗しました');
       setLoading(false);
     }
@@ -210,18 +219,16 @@ export default function AdminPage() {
           })
         );
         
-        // シフトを確認したことで、自動的に確定状態と見なさないよう変更
-        // 確定状態はスタッフ自身が確定ボタンを押した場合のみ更新される
-        
         setModalOpen(false);
       } else {
         // エラーメッセージを表示
         console.error('管理者シフト更新失敗');
         setError('シフトの更新に失敗しました');
       }
-    } catch (err: any) {
-      setError(err?.message || 'シフトの更新中にエラーが発生しました');
-      console.error('管理者シフト更新エラー:', err);
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      setError(apiError.message || 'シフトの更新中にエラーが発生しました');
+      console.error('管理者シフト更新エラー:', apiError);
     } finally {
       setLoading(false);
     }
@@ -330,9 +337,10 @@ export default function AdminPage() {
         } else if (response.success && response.data) {
           console.info('自動クリーンアップ:', response.data.message);
         }
-      } catch (err) {
+      } catch (error: unknown) {
         if (isSubscribed) {
-          console.error('古いシフトデータの自動削除中にエラーが発生しました:', err);
+          const apiError = error as ApiError;
+          console.error('古いシフトデータの自動削除中にエラーが発生しました:', apiError);
         }
       }
     };
@@ -351,7 +359,7 @@ export default function AdminPage() {
         clearInterval(interval);
       }
     };
-  }, [group?.groupId]); // shiftApiは依存関係から除外
+  }, [group?.groupId]); // shiftApiを依存配列から削除
   
   // シフト確定状態を切り替える関数
   const toggleShiftConfirmation = async (staffId: string, currentStatus: boolean | undefined) => {
@@ -374,7 +382,7 @@ export default function AdminPage() {
             if (staff.staff_id === staffId) {
               return {
                 ...staff,
-                isConfirmed: response.data.isConfirmed
+                isConfirmed: response.data?.isConfirmed ?? false
               };
             }
             return staff;
@@ -384,9 +392,9 @@ export default function AdminPage() {
         // エラーメッセージを表示
         setError(response.error || 'シフト確定状態の変更に失敗しました');
       }
-    } catch (err: any) {
-      setError(err?.message || 'シフト確定状態の変更中にエラーが発生しました');
-      console.error('シフト確定状態変更エラー:', err);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'シフト確定状態の変更中にエラーが発生しました');
+      console.error('シフト確定状態変更エラー:', error);
     } finally {
       setUpdatingConfirmStatus(null);
     }

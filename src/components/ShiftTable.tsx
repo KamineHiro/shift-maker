@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShiftData, ShiftInfo } from '@/types';
+import { ShiftData } from '@/types';
 
 interface ShiftTableProps {
   dates: string[];

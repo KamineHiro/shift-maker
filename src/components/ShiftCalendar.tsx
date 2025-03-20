@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShiftData, ShiftInfo } from '@/types';
-import { CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { ClockIcon } from '@heroicons/react/24/outline';
 
 interface ShiftCalendarProps {
   dates: string[];

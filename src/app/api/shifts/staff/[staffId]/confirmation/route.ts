@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { validate as isUUID } from 'uuid';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { staffId: string } }
-) {
+  request: NextRequest,
+  context: { params: Promise<{ staffId: string }> } // ✅ `params` を `Promise` で取得
+): Promise<NextResponse> {
   try {
-    // paramsオブジェクトをawaitして非同期的に解決
-    const { staffId } = await params;
+    const { staffId } = await context.params; // ✅ `await` で `params` を取得
+
     console.log("確定状態取得リクエスト (REST):", staffId);
 
     // UUIDのバリデーション
@@ -49,4 +49,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+}

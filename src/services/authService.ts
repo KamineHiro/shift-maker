@@ -19,7 +19,7 @@ export const authService = {
         .from('staff')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (staffError && staffError.code !== 'PGRST116') {
         console.error('スタッフ情報の取得に失敗しました:', staffError);
@@ -57,7 +57,7 @@ export const authService = {
         .from('staff')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (staffError && staffError.code !== 'PGRST116') {
         console.error('スタッフ情報の取得に失敗しました:', staffError);
@@ -100,7 +100,7 @@ export const authService = {
           role
         }])
         .select()
-        .single();
+        .maybeSingle();
       
       if (staffError) {
         console.error('スタッフ情報の作成に失敗しました:', staffError);

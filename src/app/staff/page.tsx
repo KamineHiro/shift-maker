@@ -7,6 +7,12 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { ShiftInfo } from '@/types';
 import { formatDisplayDate } from '@/utils/helpers';
 
+// APIエラー型の定義
+interface ApiError {
+  message: string;
+  status?: number;
+}
+
 export default function StaffPage() {
   const { user, signOut } = useAuth();
   const shiftApi = useShiftApi();
@@ -24,27 +30,27 @@ export default function StaffPage() {
         setLoading(true);
         setError(null);
         
-        // 日付データの取得
         const datesResponse = await shiftApi.getDates();
         if (datesResponse.success && datesResponse.data) {
           setDates(datesResponse.data as string[]);
         }
         
-        // スタッフのシフトデータを取得
         const shiftsResponse = await shiftApi.getStaffShifts(user.id);
         if (shiftsResponse.success && shiftsResponse.data) {
           setShifts(shiftsResponse.data as Record<string, ShiftInfo>);
         }
         
         setLoading(false);
-      } catch (err) {
-        setError('シフトデータの読み込みに失敗しました');
+      } catch (error: unknown) {
+        const apiError = error as ApiError;
+        setError(apiError.message || 'シフトデータの読み込みに失敗しました');
+        console.error('シフトデータ読み込みエラー:', apiError);
         setLoading(false);
       }
     };
     
     fetchStaffShifts();
-  }, [user]);
+  }, [user, shiftApi]);
 
   // シフト状態に応じたスタイルとテキストを取得
   const getShiftDisplay = (shift?: ShiftInfo) => {
