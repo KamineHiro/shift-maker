@@ -136,19 +136,19 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
 
   return (
     <div 
-      className={`fixed inset-0 flex items-center justify-center z-50 transition-all duration-300 ease-in-out ${isVisible ? 'bg-gray-400 bg-opacity-5' : 'bg-transparent pointer-events-none'}`}
+      className={`fixed inset-0 flex items-center justify-center z-50 transition-all duration-300 ease-in-out overflow-auto py-4 ${isVisible ? 'bg-gray-400 bg-opacity-5' : 'bg-transparent pointer-events-none'}`}
       onClick={handleClose}
     >
       <div 
-        className={`bg-white rounded-lg p-6 py-8 w-full max-w-md shadow-xl transition-all duration-300 transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
+        className={`bg-white rounded-lg p-5 py-6 w-full max-w-md shadow-xl transition-all duration-300 transform my-auto mx-4 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
         onClick={e => e.stopPropagation()}
       >
-        <h2 className="text-xl font-bold mb-6">シフト入力</h2>
-        <p className="mb-6">
+        <h2 className="text-xl font-bold mb-5">シフト入力</h2>
+        <p className="mb-5">
           <span className="font-medium">{staffName}</span> - <span className="text-green-600">{date}</span>
         </p>
         
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="max-h-[calc(100vh-12rem)] overflow-y-auto pb-2">
           <div className="mb-4 space-y-2">
             <label className="flex items-center">
               <input
