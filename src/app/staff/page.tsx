@@ -77,6 +77,58 @@ export default function StaffPage() {
     }
   };
 
+  const handleBulkShiftUpdate = async (isWorking: boolean) => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // 確認ダイアログを表示
+      const actionType = isWorking ? '全日勤務可能' : '休み';
+      const confirmed = confirm(`すべての日程を「${actionType}」に一括設定しますか？\nこの操作は元に戻せません。`);
+      
+      if (!confirmed) {
+        setLoading(false);
+        return;
+      }
+      
+      // 処理中メッセージを表示
+      if (isWorking) {
+        setError('全日程を勤務可能に設定中...');
+      } else {
+        setError('全日程を休みに設定中...');
+      }
+      
+      const response = await shiftApi.updateStaffShifts(user.staffId || user.id, isWorking);
+      
+      if (response.success) {
+        // 成功メッセージを表示
+        const actionMsg = isWorking ? '「全日勤務可能」' : '「休み」';
+        setError(`全日程を${actionMsg}に設定しました！`);
+        
+        // シフトデータの再取得
+        const shiftsResponse = await shiftApi.getStaffShifts(user.staffId || user.id);
+        if (shiftsResponse.success && shiftsResponse.data) {
+          setShifts(shiftsResponse.data as Record<string, ShiftInfo>);
+        }
+        
+        // 成功メッセージを3秒後に消す
+        setTimeout(() => {
+          setError(null);
+        }, 3000);
+      } else {
+        setError(response.error || 'シフトの一括更新に失敗しました');
+      }
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      setError(apiError.message || 'シフトの一括更新に失敗しました');
+      console.error('シフト一括更新エラー:', apiError);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ProtectedRoute allowedRoles={['staff']}>
       <div className="min-h-screen bg-slate-50">
@@ -144,6 +196,27 @@ export default function StaffPage() {
           {/* シフト表示セクション */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-xl font-semibold text-slate-800 mb-6">あなたのシフト</h2>
+            
+            {/* 一括設定ボタン */}
+            {!loading && dates.length > 0 && (
+              <div className="flex items-center space-x-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-sm font-medium text-slate-700 mr-2">クイック設定:</div>
+                <button
+                  onClick={() => handleBulkShiftUpdate(false)}
+                  className="flex-1 px-4 py-3 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors duration-200 text-sm font-medium border border-red-200"
+                  disabled={loading}
+                >
+                  全て休みに設定
+                </button>
+                <button
+                  onClick={() => handleBulkShiftUpdate(true)}
+                  className="flex-1 px-4 py-3 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors duration-200 text-sm font-medium border border-green-200"
+                  disabled={loading}
+                >
+                  全て全日勤務可に設定
+                </button>
+              </div>
+            )}
             
             {loading ? (
               <div className="py-12 text-center">

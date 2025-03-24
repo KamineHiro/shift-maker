@@ -55,7 +55,7 @@ export default function GroupPage() {
         // 日付範囲とスタッフ一覧を並列で取得
         const [dateRangeResponse, staffResponse] = await Promise.all([
           shiftApi.getDateRange(group.groupId),
-          staffApi.getStaffList()
+          staffApi.getStaffList(group.groupId)
         ]);
 
         // 日付データの処理
@@ -76,7 +76,18 @@ export default function GroupPage() {
 
         // スタッフデータの処理
         if (isSubscribed && staffResponse.success && Array.isArray(staffResponse.data)) {
+          // グループIDに一致するスタッフのみが返されるはず
+          console.log(`グループID: ${group.groupId}のスタッフを表示します`);
+          console.log(`取得したスタッフ: ${staffResponse.data.length}人`);
+          
+          if (staffResponse.data.length === 0) {
+            console.warn(`グループID: ${group.groupId}に登録されているスタッフが見つかりません`);
+          }
+          
           setExistingStaff(staffResponse.data);
+        } else if (isSubscribed) {
+          console.error('スタッフデータの取得に失敗:', staffResponse.error);
+          setExistingStaff([]);
         }
 
         // ローカルストレージからスタッフ情報を取得
@@ -138,6 +149,20 @@ export default function GroupPage() {
     try {
       setLoading(true);
       setError(null);
+      
+      // 選択されたスタッフが現在のグループに所属していることを確認
+      // まず選択されたスタッフIDが現在のexistingStaffリストに含まれているか確認
+      const isStaffInCurrentGroup = existingStaff.some(staff => {
+        const staffId = staff.id || staff.staff_id;
+        return staffId === selectedExistingStaffId;
+      });
+      
+      if (!isStaffInCurrentGroup) {
+        setError(`セキュリティエラー: 選択されたスタッフは現在のグループに所属していません`);
+        console.error(`セキュリティ警告: グループ ${group.groupId} に所属していないスタッフ ${selectedExistingStaffId} の選択が試みられました`);
+        setLoading(false);
+        return;
+      }
       
       const response = await staffApi.getStaff(selectedExistingStaffId);
       
@@ -314,6 +339,131 @@ export default function GroupPage() {
     }
   };
   
+  // すべての日程を一括で更新する関数
+  const handleBulkShiftUpdate = async (isWorking: boolean) => {
+    if (!staffId) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // 確認ダイアログを表示
+      const actionType = isWorking ? '全日勤務可能' : '休み';
+      const confirmed = confirm(`すべての日程を「${actionType}」に一括設定しますか？\nこの操作は元に戻せません。`);
+      
+      if (!confirmed) {
+        setLoading(false);
+        return;
+      }
+      
+      // 処理中メッセージを表示
+      setError(isWorking ? '全日程を勤務可能に設定中...' : '全日程を休みに設定中...');
+      
+      // 現在表示されている日付を使用
+      console.log(`一括更新を開始: staffId=${staffId}, isWorking=${isWorking}, 日付数=${dates.length}`);
+      console.log('対象日付:', dates);
+      
+      // 現在表示されている日付範囲を使用して更新を実行
+      const response = await shiftApi.updateStaffShifts(staffId, isWorking, dates);
+      console.log('一括更新のレスポンス:', response);
+      
+      if (response.success) {
+        // 成功メッセージを表示
+        const actionMsg = isWorking ? '「全日勤務可能」' : '「休み」';
+        setError(`全日程を${actionMsg}に設定しました！`);
+        
+        // シフトデータを再取得（最大3回まで試行）
+        let retryCount = 0;
+        let shiftsUpdated = false;
+        
+        // 少し長めの待機時間（まず1秒待つ）
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        while (retryCount < 3 && !shiftsUpdated) {
+          try {
+            console.log(`シフトデータ再取得: 試行 ${retryCount + 1}`);
+            
+            // 再取得前に段階的に長く待機（DB更新のタイムラグ対策）
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            
+            const shiftsResponse = await shiftApi.getStaffShifts(staffId);
+            console.log('再取得レスポンス:', shiftsResponse);
+            
+            if (shiftsResponse.success && shiftsResponse.data) {
+              // データの検証（すべての日程が更新されているか確認）
+              const newShifts = shiftsResponse.data as Record<string, ShiftInfo>;
+              console.log(`取得したシフト数: ${Object.keys(newShifts).length}`);
+              
+              // 全日程の中から一部をサンプルとして抽出してログ出力
+              const shiftDates = Object.keys(newShifts).sort();
+              
+              if (shiftDates.length > 0) {
+                const firstDate = shiftDates[0];
+                const lastDate = shiftDates[shiftDates.length - 1];
+                const middleDate = shiftDates[Math.floor(shiftDates.length / 2)];
+                
+                console.log(`最初の日付 ${firstDate} のシフト:`, newShifts[firstDate]);
+                if (middleDate) console.log(`中間の日付 ${middleDate} のシフト:`, newShifts[middleDate]);
+                console.log(`最後の日付 ${lastDate} のシフト:`, newShifts[lastDate]);
+                
+                // 表示されている日付に対してのみ検証
+                const updatedCount = dates.filter(date => 
+                  newShifts[date] && newShifts[date].isWorking === isWorking
+                ).length;
+                
+                console.log(`更新された日付数: ${updatedCount}/${dates.length}`);
+                
+                if (updatedCount === 0) {
+                  console.warn('更新された日付が見つかりません。再試行します...');
+                  retryCount++;
+                  continue;
+                }
+              }
+              
+              setShifts(newShifts);
+              shiftsUpdated = true;
+              console.log('シフトデータを正常に更新しました');
+            } else {
+              console.warn('シフトデータの再取得に失敗:', shiftsResponse.error);
+            }
+          } catch (fetchError) {
+            console.error(`シフトデータの再取得に失敗 (試行 ${retryCount + 1}):`, fetchError);
+          }
+          
+          retryCount++;
+        }
+        
+        if (!shiftsUpdated) {
+          console.error('シフトデータの再取得に失敗しました。ページを再読み込みしてください。');
+          // 自動リロードを案内
+          setError(`全日程を${actionMsg}に設定しました！データを更新するには画面をリロードしてください。`);
+        }
+        
+        // 成功メッセージを5秒後に消す
+        setTimeout(() => {
+          setError(null);
+        }, 5000); // 5秒に延長
+      } else {
+        setError(response.error || 'シフトの一括更新に失敗しました');
+        console.error('一括更新エラー:', response.error);
+        // エラーメッセージを5秒後に消す
+        setTimeout(() => {
+          setError(null);
+        }, 5000);
+      }
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      setError(apiError.message || 'シフトの一括更新に失敗しました');
+      console.error('シフト一括更新エラー:', apiError);
+      // エラーメッセージを5秒後に消す
+      setTimeout(() => {
+        setError(null);
+      }, 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // リダイレクト中の表示
   if (!group) {
     return (
@@ -343,8 +493,27 @@ export default function GroupPage() {
 
       <main className="max-w-4xl mx-auto">
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            <p>{error}</p>
+          <div className={`px-4 py-3 rounded mb-4 flex items-center justify-between ${
+            error.includes('設定中...') 
+              ? 'bg-blue-100 border border-blue-400 text-blue-700' 
+              : error.includes('設定しました') 
+                ? 'bg-green-100 border border-green-400 text-green-700'
+                : 'bg-red-100 border border-red-400 text-red-700'
+          }`}>
+            <div className="flex items-center">
+              {error.includes('設定中...') && (
+                <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {error.includes('設定しました') && (
+                <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              <p>{error}</p>
+            </div>
             <button 
               className="text-sm underline ml-2"
               onClick={() => setError(null)}
@@ -467,6 +636,35 @@ export default function GroupPage() {
                     className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
                   >
                     確定を取り消す
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* 一括設定ボタン */}
+            {!loading && dates.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center sm:space-x-4 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-sm font-medium text-gray-700 mb-3 sm:mb-0 sm:mr-2">クイック設定:</div>
+                <div className="flex flex-wrap w-full sm:w-auto space-y-2 sm:space-y-0 space-x-0 sm:space-x-3">
+                  <button
+                    onClick={() => handleBulkShiftUpdate(false)}
+                    className="w-full sm:w-auto px-4 py-3 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors duration-200 text-sm font-medium border border-red-200 flex items-center justify-center"
+                    disabled={loading}
+                  >
+                    <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    全て休みに設定
+                  </button>
+                  <button
+                    onClick={() => handleBulkShiftUpdate(true)}
+                    className="w-full sm:w-auto px-4 py-3 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors duration-200 text-sm font-medium border border-green-200 flex items-center justify-center"
+                    disabled={loading}
+                  >
+                    <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    全て全日勤務可に設定
                   </button>
                 </div>
               </div>

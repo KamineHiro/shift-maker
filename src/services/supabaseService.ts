@@ -7,6 +7,8 @@ export const staffService = {
   // スタッフ一覧を取得
   async getStaffList(groupId?: string): Promise<ShiftData[]> {
     try {
+      console.log(`スタッフ一覧取得 - グループID: ${groupId || '未指定'}`);
+      
       // スタッフデータを取得
       let query = supabase
         .from('staff')
@@ -15,13 +17,25 @@ export const staffService = {
       
       // グループIDが指定されている場合はフィルタリング
       if (groupId) {
+        console.log(`グループID: ${groupId} でスタッフをフィルタリングします`);
         query = query.eq('group_id', groupId);
+      } else {
+        console.warn('グループIDが指定されていません。すべてのスタッフが返されます');
       }
       
       const { data: staffData, error: staffError } = await query;
 
-      if (staffError) throw staffError;
-      if (!staffData) return [];
+      if (staffError) {
+        console.error('スタッフデータ取得エラー:', staffError);
+        throw staffError;
+      }
+      
+      if (!staffData) {
+        console.log('スタッフデータが見つかりません');
+        return [];
+      }
+      
+      console.log(`取得したスタッフ数: ${staffData.length}人`);
 
       // 各スタッフのシフト情報を取得
       const staffWithShifts: ShiftData[] = await Promise.all(
@@ -232,19 +246,27 @@ export const shiftService = {
   // 日付一覧を取得（デフォルトは現在の日付から14日間）
   async getDates(startDate?: Date, days: number = 14): Promise<string[]> {
     try {
+      console.log(`getDates呼び出し: startDate=${startDate?.toISOString() || '未指定'}, days=${days}`);
       const dates: string[] = [];
-      const start = startDate || new Date();
+      const start = startDate ? new Date(startDate) : new Date();
+      
+      // タイムゾーンの問題を回避するため、日付のみに統一
+      start.setHours(0, 0, 0, 0);
       
       for (let i = 0; i < days; i++) {
         const date = new Date(start);
-        date.setDate(date.getDate() + i);
+        date.setDate(start.getDate() + i);
+        
+        // YYYY-MM-DD形式で保存（UTC問題を回避）
         const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
-        // YYYY-MM-DD形式で保存
-        dates.push(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        
+        dates.push(formattedDate);
       }
       
+      console.log(`生成された日付一覧: ${JSON.stringify(dates)}`);
       return dates;
     } catch (error) {
       console.error('日付一覧の取得に失敗しました:', error);
@@ -400,16 +422,22 @@ export const shiftService = {
   // 特定のスタッフの全シフトを取得
   async getStaffShifts(staffId: string): Promise<Record<string, ShiftInfo>> {
     try {
+      console.log(`スタッフID: ${staffId}のシフトデータを取得します`);
+      
       const { data, error } = await supabase
         .from('shifts')
         .select('*')
         .eq('staff_id', staffId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('シフトデータ取得エラー:', error);
+        throw error;
+      }
 
       // シフトデータをフォーマット
       const shiftsRecord: Record<string, ShiftInfo> = {};
       if (data) {
+        console.log(`取得したシフト数: ${data.length}`);
         data.forEach((shift) => {
           const cleanNote = shift.note ? shift.note.trim() : '';
           
@@ -422,11 +450,132 @@ export const shiftService = {
             note: cleanNote
           } as ShiftInfo;
         });
+      } else {
+        console.log('シフトデータはありません');
       }
 
       return shiftsRecord;
     } catch (error) {
       console.error('スタッフのシフト一覧の取得に失敗しました:', error);
+      throw error;
+    }
+  },
+
+  // スタッフの全シフトを一括で更新
+  async updateStaffShifts(staffId: string, isWorking: boolean, specificDates?: string[]): Promise<boolean> {
+    try {
+      console.log(`スタッフID: ${staffId}の全シフトを${isWorking ? '勤務可能' : '休み'}に設定します`);
+      
+      // 特定の日付が指定されている場合はそれを使用、そうでなければデフォルトの日付範囲を取得
+      const dates = specificDates || await this.getDates();
+      console.log(`更新対象の日付数: ${dates.length}日間, 対象日: ${JSON.stringify(dates)}`);
+      
+      // 一度に処理する最大数を増やす
+      const BATCH_SIZE = 14; // 全ての日程（通常14日）を一度に処理
+      let success = true;
+      
+      // バッチ処理でシフトを更新
+      for (let i = 0; i < dates.length; i += BATCH_SIZE) {
+        const batch = dates.slice(i, i + BATCH_SIZE);
+        console.log(`バッチ処理: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目, 日付: ${JSON.stringify(batch)}`);
+        
+        // 現在のバッチの処理を並列実行
+        const batchPromises = batch.map(async (date) => {
+          try {
+            // 既存のシフトがあるか確認
+            const { data: existingShift, error: checkError } = await supabase
+              .from('shifts')
+              .select('*')
+              .eq('staff_id', staffId)
+              .eq('date', date)
+              .maybeSingle();
+              
+            if (checkError) {
+              console.error(`日付: ${date}のシフト確認エラー:`, checkError);
+              return false;
+            }
+            
+            let startTime = '09:00';
+            let endTime = '22:00';
+            let note = '';
+            
+            // 既存のシフトがある場合は時間やメモを引き継ぐ
+            if (existingShift) {
+              console.log(`既存シフト更新: ${date}, is_off=${!isWorking}`);
+              startTime = existingShift.start_time || startTime;
+              endTime = existingShift.end_time || endTime;
+              note = existingShift.note || note;
+              
+              // 更新
+              const { data: updateData, error: updateError } = await supabase
+                .from('shifts')
+                .update({
+                  start_time: startTime,
+                  end_time: endTime,
+                  note,
+                  is_off: !isWorking
+                })
+                .eq('staff_id', staffId)
+                .eq('date', date)
+                .select();
+                
+              if (updateError) {
+                console.error(`日付: ${date}のシフト更新エラー:`, updateError);
+                return false;
+              }
+              
+              console.log(`シフト更新完了: ${date}, 結果:`, updateData ? '成功' : '不明');
+            } else {
+              console.log(`新規シフト作成: ${date}, is_off=${!isWorking}`);
+              // 新規作成
+              const { data: insertData, error: insertError } = await supabase
+                .from('shifts')
+                .insert({
+                  id: uuidv4(),
+                  staff_id: staffId,
+                  date,
+                  start_time: startTime,
+                  end_time: endTime,
+                  note,
+                  is_off: !isWorking
+                })
+                .select();
+                
+              if (insertError) {
+                console.error(`日付: ${date}のシフト作成エラー:`, insertError);
+                return false;
+              }
+              
+              console.log(`シフト作成完了: ${date}, 結果:`, insertData ? '成功' : '不明');
+            }
+            
+            return true;
+          } catch (error) {
+            console.error(`日付: ${date}の処理でエラー:`, error);
+            return false;
+          }
+        });
+        
+        // バッチ処理の結果を確認
+        const batchResults = await Promise.all(batchPromises);
+        const batchSuccess = batchResults.every(result => result === true);
+        if (!batchSuccess) {
+          console.warn(`バッチ処理でエラーが発生しました: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目`);
+          const failedIndices = batchResults.map((result, index) => !result ? index : -1).filter(index => index !== -1);
+          console.warn(`失敗した日程のインデックス: ${failedIndices.join(', ')}`);
+          success = false;
+        } else {
+          console.log(`バッチ処理成功: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目`);
+        }
+        
+        // 次のバッチ処理の前に少し待機（レート制限対策）
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      
+      console.log(`全シフト更新処理完了. 結果: ${success ? '成功' : '一部失敗'}`);
+      return success;
+    } catch (error) {
+      console.error('スタッフの全シフト一括更新に失敗しました:', error);
       throw error;
     }
   },

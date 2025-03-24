@@ -360,6 +360,31 @@ export function useShiftApi() {
     }
   }, []);
 
+  // スタッフの全シフトを一括で更新
+  const updateStaffShifts = useCallback(async (staffId: string, isWorking: boolean, specificDates?: string[]) => {
+    try {
+      console.log(`API Hookからの一括更新開始: staffId=${staffId}, isWorking=${isWorking}, 日付指定=${specificDates ? specificDates.length + '日分' : 'なし'}`);
+      
+      const result = await shiftService.updateStaffShifts(staffId, isWorking, specificDates);
+      console.log(`一括更新結果: ${result ? '成功' : '失敗'}`);
+      
+      return { 
+        success: result, 
+        data: result, 
+        error: result ? undefined : 'シフトの一括更新に失敗しました' 
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+      console.error('スタッフの全シフト一括更新エラー:', error);
+      console.error('エラー詳細:', errorMessage);
+      setError('スタッフの全シフト一括更新に失敗しました');
+      return { 
+        success: false, 
+        error: `スタッフの全シフト一括更新に失敗しました: ${errorMessage}` 
+      };
+    }
+  }, []);
+
   return {
     getDates,
     getShift,
@@ -375,6 +400,7 @@ export function useShiftApi() {
     getShiftConfirmation,
     confirmShift,
     unconfirmShift,
+    updateStaffShifts,
     loading: api.loading,
     error: api.error || error
   };
