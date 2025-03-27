@@ -51,7 +51,7 @@ export default function GroupPage() {
       try {
         setLoading(true);
         setError(null);
-
+        
         // 日付範囲とスタッフ一覧を並列で取得
         const [dateRangeResponse, staffResponse] = await Promise.all([
           shiftApi.getDateRange(group.groupId),
@@ -89,13 +89,13 @@ export default function GroupPage() {
           console.error('スタッフデータの取得に失敗:', staffResponse.error);
           setExistingStaff([]);
         }
-
+        
         // ローカルストレージからスタッフ情報を取得
         if (isSubscribed) {
-          const storedStaffId = localStorage.getItem(`staffId_${group.groupId}`);
-          const storedStaffName = localStorage.getItem(`staffName_${group.groupId}`);
-          
-          if (storedStaffId && storedStaffName) {
+        const storedStaffId = localStorage.getItem(`staffId_${group.groupId}`);
+        const storedStaffName = localStorage.getItem(`staffName_${group.groupId}`);
+        
+        if (storedStaffId && storedStaffName) {
             // 現在の値と異なる場合のみ更新
             setStaffId((prev) => (prev === storedStaffId ? prev : storedStaffId));
             setStaffName((prev) => (prev === storedStaffName ? prev : storedStaffName));
@@ -108,10 +108,10 @@ export default function GroupPage() {
             
             if (isSubscribed && confirmResponse.success && confirmResponse.data) {
               setIsShiftConfirmed(confirmResponse.data.isConfirmed);
-              localStorage.setItem(`shiftConfirmed_${group.groupId}_${storedStaffId}_individual`, 
-                confirmResponse.data.isConfirmed ? 'true' : 'false');
-            }
-            
+            localStorage.setItem(`shiftConfirmed_${group.groupId}_${storedStaffId}_individual`, 
+              confirmResponse.data.isConfirmed ? 'true' : 'false');
+          }
+          
             if (isSubscribed && shiftsResponse.success && shiftsResponse.data) {
               setShifts(shiftsResponse.data);
             }
@@ -123,14 +123,14 @@ export default function GroupPage() {
         }
         
         if (isSubscribed) {
-          setLoading(false);
+        setLoading(false);
         }
       } catch (error) {
         if (isSubscribed) {
           const apiError = error as ApiError;
           setError(apiError.message || 'データの読み込みに失敗しました');
           console.error('データ読み込みエラー:', apiError);
-          setLoading(false);
+        setLoading(false);
         }
       }
     };
@@ -370,21 +370,21 @@ export default function GroupPage() {
       if (response.success) {
         // 成功メッセージを表示
         const actionMsg = isWorking ? '「全日勤務可能」' : '「休み」';
-        setError(`全日程を${actionMsg}に設定しました！`);
+        setError(`全日程を${actionMsg}に設定しました！データを更新中...`);
         
-        // シフトデータを再取得（最大3回まで試行）
+        // シフトデータを再取得（最大5回まで試行）
         let retryCount = 0;
         let shiftsUpdated = false;
         
-        // 少し長めの待機時間（まず1秒待つ）
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // まず少し長めに待機（3秒）してデータベース反映を待つ
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
-        while (retryCount < 3 && !shiftsUpdated) {
+        while (retryCount < 5 && !shiftsUpdated) {
           try {
             console.log(`シフトデータ再取得: 試行 ${retryCount + 1}`);
             
             // 再取得前に段階的に長く待機（DB更新のタイムラグ対策）
-            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
             
             const shiftsResponse = await shiftApi.getStaffShifts(staffId);
             console.log('再取得レスポンス:', shiftsResponse);
@@ -398,51 +398,63 @@ export default function GroupPage() {
               const shiftDates = Object.keys(newShifts).sort();
               
               if (shiftDates.length > 0) {
-                const firstDate = shiftDates[0];
-                const lastDate = shiftDates[shiftDates.length - 1];
-                const middleDate = shiftDates[Math.floor(shiftDates.length / 2)];
+                // サンプルとしていくつかの日付を確認
+                const sampleDates = shiftDates.length <= 3 ? 
+                  shiftDates : 
+                  [shiftDates[0], shiftDates[Math.floor(shiftDates.length / 2)], shiftDates[shiftDates.length - 1]];
                 
-                console.log(`最初の日付 ${firstDate} のシフト:`, newShifts[firstDate]);
-                if (middleDate) console.log(`中間の日付 ${middleDate} のシフト:`, newShifts[middleDate]);
-                console.log(`最後の日付 ${lastDate} のシフト:`, newShifts[lastDate]);
+                sampleDates.forEach(date => {
+                  console.log(`日付 ${date} のシフト:`, newShifts[date]);
+                });
                 
-                // 表示されている日付に対してのみ検証
-                const updatedCount = dates.filter(date => 
+                // 表示されている日付に対して更新検証（一部でも更新されていればOK）
+                const updatedDates = dates.filter(date => 
                   newShifts[date] && newShifts[date].isWorking === isWorking
-                ).length;
+                );
                 
-                console.log(`更新された日付数: ${updatedCount}/${dates.length}`);
+                console.log(`更新された日付数: ${updatedDates.length}/${dates.length}`);
                 
-                if (updatedCount === 0) {
+                if (updatedDates.length > 0) {
+                  // データが取得できていれば成功とみなす
+                  setShifts(newShifts);
+                  shiftsUpdated = true;
+                  setError(`全日程を${actionMsg}に設定しました！`);
+                  console.log('シフトデータを正常に更新しました');
+                  
+                  // 成功メッセージを5秒後に消す
+                  setTimeout(() => {
+                    setError(null);
+                  }, 5000);
+                } else {
                   console.warn('更新された日付が見つかりません。再試行します...');
                   retryCount++;
-                  continue;
                 }
+              } else {
+                console.warn('シフトデータが空です。再試行します...');
+                retryCount++;
               }
-              
-              setShifts(newShifts);
-              shiftsUpdated = true;
-              console.log('シフトデータを正常に更新しました');
             } else {
               console.warn('シフトデータの再取得に失敗:', shiftsResponse.error);
+              retryCount++;
             }
           } catch (fetchError) {
             console.error(`シフトデータの再取得に失敗 (試行 ${retryCount + 1}):`, fetchError);
+            retryCount++;
           }
-          
-          retryCount++;
         }
         
         if (!shiftsUpdated) {
           console.error('シフトデータの再取得に失敗しました。ページを再読み込みしてください。');
-          // 自動リロードを案内
-          setError(`全日程を${actionMsg}に設定しました！データを更新するには画面をリロードしてください。`);
+          // 再読み込みを促すメッセージ
+          setError(`全日程を${actionMsg}に設定しました。データが最新ではない可能性があります。最新データを確認するには、画面を再読み込みしてください。`);
+          
+          // 成功メッセージを10秒後に消す
+          setTimeout(() => {
+            setError(null);
+          }, 10000);
+          
+          // 自動リロードを促すボタンを表示する仕組みなどを追加してもよい
         }
-        
-        // 成功メッセージを5秒後に消す
-        setTimeout(() => {
-          setError(null);
-        }, 5000); // 5秒に延長
       } else {
         setError(response.error || 'シフトの一括更新に失敗しました');
         console.error('一括更新エラー:', response.error);
@@ -512,7 +524,7 @@ export default function GroupPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               )}
-              <p>{error}</p>
+            <p>{error}</p>
             </div>
             <button 
               className="text-sm underline ml-2"
@@ -693,8 +705,8 @@ export default function GroupPage() {
                       
                       if (shift) {
                         if (shift.isWorking) {
-                          cellContent = `${shift.startTime} - ${shift.endTime}`;
-                          cellClass = 'bg-green-100 text-green-800';
+                            cellContent = `${shift.startTime} - ${shift.endTime}`;
+                            cellClass = 'bg-green-100 text-green-800';
                         } else {
                           cellContent = '休み';
                           cellClass = 'bg-red-100 text-red-800';

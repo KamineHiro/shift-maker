@@ -407,7 +407,7 @@ export default function Home() {
           )}
         </div>
         <div className="mt-6 text-center text-xs text-sky-600">
-          <p>© 2023 シフト作成アプリ All Rights Reserved.</p>
+          <p>© 2025 シフト作成アプリ All Rights Reserved.</p>
         </div>
       </div>
     </div>

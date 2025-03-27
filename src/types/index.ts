@@ -16,6 +16,9 @@ export interface ShiftInfo {
   endTime?: string;
   note?: string;
   isAllDay?: boolean;
+  message?: string;     // 管理者からのメッセージ
+  updatedBy?: string;   // 更新者（'admin'または'staff'）
+  updatedAt?: string; 
 }
 
 // APIレスポンスの型定義

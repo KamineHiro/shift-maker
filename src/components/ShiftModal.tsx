@@ -22,6 +22,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
   const [endTime, setEndTime] = useState(currentShift?.endTime || '17:00');
   const [isWorking, setIsWorking] = useState(currentShift?.isWorking ?? true);
   const [note, setNote] = useState(currentShift?.note || '');
+  const [message, setMessage] = useState(currentShift?.message || '');
   const [shiftType, setShiftType] = useState<'custom' | 'lunch-early' | 'lunch-late' | 'dinner-early' | 'dinner-late' | 'allday'>('custom');
   const [isVisible, setIsVisible] = useState(false);
 
@@ -45,6 +46,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
       setEndTime(currentShift.endTime || '17:00');
       setIsWorking(currentShift.isWorking ?? true);
       setNote(currentShift.note || '');
+      setMessage(currentShift.message || '');
       
       // シフトタイプを設定
       if (currentShift.isAllDay) {
@@ -67,6 +69,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
       setEndTime('17:00');
       setIsWorking(true);
       setNote('');
+      setMessage('');
       setShiftType('custom');
     }
   }, [currentShift, date]);
@@ -110,6 +113,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
       endTime,
       isWorking,
       note,
+      message,
       isAllDay: shiftType === 'allday',
       // TypeScript型定義上は必要だが、実際の値は上位コンポーネントで設定される
       staff_id: '',
@@ -311,6 +315,18 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
                 rows={3}
                 placeholder="備考があれば入力してください"
               />
+            </div>
+
+            <div className="mb-4">
+              <label className="block mb-1 font-medium text-blue-600">管理者からのメッセージ</label>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="w-full p-2 border border-blue-300 rounded bg-blue-50"
+                rows={3}
+                placeholder="スタッフに表示されるメッセージを入力してください"
+              />
+              <p className="text-xs text-gray-500 mt-1">※このメッセージはスタッフのシフト画面に表示されます</p>
             </div>
 
             <div className="flex justify-end gap-2 mt-8">

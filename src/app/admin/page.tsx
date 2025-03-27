@@ -169,15 +169,33 @@ export default function AdminPage() {
   const handleCellClick = (staffId: string, date: string) => {
     const staff = staffData.find(s => s.staff_id === staffId);
     if (staff) {
-      setSelectedStaff({ id: staffId, name: staff.name });
-      setSelectedDate(date);
-      setModalOpen(true);
+      // 確認ダイアログを表示
+      const isConfirmed = confirm(`警告: ${staff.name}さんのシフトを編集します。\n\n日付: ${formatDisplayDate(date)}\n\n編集してもよろしいですか？\n\n※変更内容はスタッフに通知されます。メッセージを追加することができます。`);
+      
+      if (isConfirmed) {
+        setSelectedStaff({ id: staffId, name: staff.name });
+        setSelectedDate(date);
+        setModalOpen(true);
+      }
     }
   };
   
   // シフト情報が保存されたときの処理
   const handleShiftSave = async (shiftInfo: ShiftInfo) => {
     if (!selectedStaff || !selectedDate) return;
+    
+    // メッセージ部分を表示するための条件作成
+    const messageText = shiftInfo.message 
+      ? `\n\nメッセージ: "${shiftInfo.message}"` 
+      : '\n\nメッセージはありません';
+    
+    // 最終確認ダイアログを表示
+    const confirmMessage = shiftInfo.isWorking 
+      ? `${selectedStaff.name}さんの${formatDisplayDate(selectedDate)}のシフトを\n「勤務: ${shiftInfo.startTime} - ${shiftInfo.endTime}」\nに設定してよろしいですか？${messageText}` 
+      : `${selectedStaff.name}さんの${formatDisplayDate(selectedDate)}のシフトを\n「休み」に設定してよろしいですか？${messageText}`;
+    
+    const isConfirmed = confirm(confirmMessage);
+    if (!isConfirmed) return;
     
     try {
       setLoading(true);
@@ -192,7 +210,9 @@ export default function AdminPage() {
       const completeShiftInfo: ShiftInfo = {
         ...shiftInfo,
         staff_id: selectedStaff.id,
-        date: selectedDate
+        date: selectedDate,
+        updatedBy: 'admin',
+        updatedAt: new Date().toISOString()
       };
       
       const response = await shiftApi.updateShift(selectedStaff.id, selectedDate, completeShiftInfo);
@@ -218,6 +238,14 @@ export default function AdminPage() {
             return staff;
           })
         );
+        
+        // 成功メッセージを表示
+        setError(`${selectedStaff.name}さんの${formatDisplayDate(selectedDate)}のシフトを更新しました`);
+        
+        // 3秒後にメッセージを消す
+        setTimeout(() => {
+          setError(null);
+        }, 3000);
         
         setModalOpen(false);
       } else {

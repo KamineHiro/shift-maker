@@ -249,58 +249,39 @@ export default function StaffPage() {
                       const shift = shifts[date];
                       const { text, bgColor, textColor } = getShiftDisplay(shift);
                       
+                      // 管理者からのメッセージがあるか確認
+                      const hasMessage = shift?.message && shift.message.trim() !== '';
+                      const updatedByAdmin = shift?.updatedBy === 'admin';
+                      
                       return (
-                        <tr key={date} className="hover:bg-slate-50 transition-colors duration-150">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900">
-                            {formatDisplayDate(date)}
-                          </td>
+                        <tr key={date} className={`${hasMessage ? 'border-l-4 border-blue-500' : ''}`}>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
-                              {text}
-                            </span>
+                            <div className="text-sm font-medium text-gray-900">{formatDisplayDate(date)}</div>
+                            {shift?.updatedAt && updatedByAdmin && (
+                              <div className="text-xs text-gray-500">
+                                管理者が更新: {new Date(shift.updatedAt).toLocaleString('ja-JP')}
+                              </div>
+                            )}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
-                            {shift?.isWorking ? (
-                              <div className="space-y-1">
-                                <p className="flex items-center">
-                                  <svg className="h-4 w-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  勤務時間: {shift.startTime} - {shift.endTime}
-                                </p>
-                                {shift.note && (
-                                  <p className="flex items-center">
-                                    <svg className="h-4 w-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                    </svg>
-                                    備考: {shift.note}
-                                  </p>
-                                )}
+                          <td className={`px-4 py-3 whitespace-nowrap ${bgColor} ${textColor}`}>
+                            <span className="text-sm font-medium">{text}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {shift?.note && (
+                              <div className="text-sm text-gray-600">
+                                <span className="font-medium">備考: </span>{shift.note}
                               </div>
-                            ) : shift ? (
-                              <div className="space-y-1">
-                                <p className="flex items-center">
-                                  <svg className="h-4 w-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            )}
+                            {hasMessage && (
+                              <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+                                <div className="font-medium flex items-center mb-1">
+                                  <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
-                                  休み
-                                </p>
-                                {shift.note && (
-                                  <p className="flex items-center">
-                                    <svg className="h-4 w-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                    </svg>
-                                    備考: {shift.note}
-                                  </p>
-                                )}
+                                  管理者からのメッセージ:
+                                </div>
+                                {shift.message}
                               </div>
-                            ) : (
-                              <p className="flex items-center text-slate-500">
-                                <svg className="h-4 w-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                シフトが設定されていません
-                              </p>
                             )}
                           </td>
                         </tr>

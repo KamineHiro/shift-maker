@@ -466,8 +466,54 @@ export const shiftService = {
     try {
       console.log(`スタッフID: ${staffId}の全シフトを${isWorking ? '勤務可能' : '休み'}に設定します`);
       
-      // 特定の日付が指定されている場合はそれを使用、そうでなければデフォルトの日付範囲を取得
-      const dates = specificDates || await this.getDates();
+      // staffIdを持つスタッフがどのグループに所属しているか確認
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('group_id')
+        .eq('id', staffId)
+        .maybeSingle();
+        
+      if (staffError) {
+        console.error('スタッフデータの取得に失敗しました:', staffError);
+        throw staffError;
+      }
+      
+      if (!staffData || !staffData.group_id) {
+        console.error('スタッフがグループに所属していないか、データの取得に失敗しました');
+        throw new Error('スタッフデータの取得に失敗しました');
+      }
+      
+      const groupId = staffData.group_id;
+      console.log(`スタッフのグループID: ${groupId}`);
+      
+      let dates: string[] = [];
+      
+      // 特定の日付が指定されている場合はそれを使用
+      if (specificDates && specificDates.length > 0) {
+        dates = specificDates;
+        console.log('指定された日付で更新を実行:', dates);
+      } 
+      // 指定がない場合はグループの日付範囲を取得
+      else {
+        try {
+          const dateRange = await this.getDateRange(groupId);
+          if (dateRange) {
+            const { startDate, days } = dateRange;
+            dates = await this.getDates(new Date(startDate), days);
+            console.log(`グループの日付範囲を使用: ${startDate}から${days}日間`);
+          } else {
+            // グループに日付範囲が設定されていない場合はデフォルトを使用
+            dates = await this.getDates();
+            console.log('デフォルトの日付範囲を使用');
+          }
+        } catch (error) {
+          console.error('日付範囲の取得に失敗しました:', error);
+          // エラーが発生した場合もデフォルトを使用
+          dates = await this.getDates();
+          console.log('エラーのためデフォルトの日付範囲を使用');
+        }
+      }
+      
       console.log(`更新対象の日付数: ${dates.length}日間, 対象日: ${JSON.stringify(dates)}`);
       
       // 一度に処理する最大数を増やす
