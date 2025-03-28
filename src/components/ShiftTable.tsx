@@ -37,7 +37,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ dates, staffData, onCellClick }
           </tr>
         </thead>
         <tbody>
-          {dates.map((date, index) => {
+          {dates.map((date) => {
             const staff = staffData[0]; // 特定のスタッフのシフトを表示
             const shift = staff?.shifts[date];
             
