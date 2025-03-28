@@ -440,32 +440,32 @@ export default function AdminPage() {
   
   if (!group || !group.isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-sky-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">リダイレクト中...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-sky-500 mx-auto"></div>
+          <p className="mt-4 text-sky-700">リダイレクト中...</p>
         </div>
       </div>
     );
   }
   
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-sky-50">
       {/* ヘッダーセクション */}
-      <header className="bg-white border-b border-slate-200 shadow-sm">
+      <header className="bg-white border-b border-sky-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-800">
+              <h1 className="text-2xl sm:text-3xl font-semibold text-sky-800">
                 シフト作成アプリ
               </h1>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-sky-600">
                 管理者ダッシュボード - グループ: {group.groupName}
               </p>
             </div>
             <button
               onClick={leaveGroup}
-              className="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200"
+              className="inline-flex items-center px-4 py-2 bg-white border border-sky-200 rounded-lg text-sm font-medium text-sky-700 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200 shadow-sm"
             >
               グループを離れる
             </button>
@@ -502,25 +502,25 @@ export default function AdminPage() {
         )}
 
         {/* データ管理セクション */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-slate-800">データ管理</h2>
+            <h2 className="text-xl font-semibold text-sky-800">データ管理</h2>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-sky-100 text-sky-800">
               自動クリーンアップ有効
             </span>
           </div>
-          <p className="text-slate-600 text-sm leading-relaxed">
+          <p className="text-sky-600 text-sm leading-relaxed">
             シフトデータは毎日自動的にクリーンアップされ、6週間以上前のデータは削除されます。
             これにより、データベースの容量を効率的に管理し、アプリケーションのパフォーマンスを維持します。
           </p>
         </div>
 
         {/* スタッフ追加フォーム */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-slate-800 mb-4">スタッフ追加</h2>
+        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-sky-800 mb-4">スタッフ追加</h2>
           <form onSubmit={handleAddStaff} className="flex items-end gap-4">
             <div className="flex-grow">
-              <label htmlFor="newStaffName" className="block text-sm font-medium text-slate-700 mb-1">
+              <label htmlFor="newStaffName" className="block text-sm font-medium text-sky-700 mb-1">
                 スタッフ名
               </label>
               <input
@@ -528,7 +528,7 @@ export default function AdminPage() {
                 type="text"
                 value={newStaffName}
                 onChange={(e) => setNewStaffName(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
+                className="w-full px-4 py-2 border border-sky-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
                 placeholder="新しいスタッフの名前"
               />
             </div>
@@ -536,9 +536,9 @@ export default function AdminPage() {
               type="submit"
               disabled={loading || !newStaffName.trim()}
               className={`
-                inline-flex items-center px-6 py-2 border border-transparent rounded-lg shadow-sm
-                text-sm font-medium text-white bg-sky-600 hover:bg-sky-700
-                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500
+                inline-flex items-center px-6 py-2 border border-transparent rounded-lg shadow-md
+                text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500
                 transition-colors duration-200
                 ${loading || !newStaffName.trim() ? 'opacity-50 cursor-not-allowed' : ''}
               `}
@@ -557,12 +557,12 @@ export default function AdminPage() {
         </div>
 
         {/* シフト管理セクション */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-slate-800">シフト管理</h2>
+            <h2 className="text-xl font-semibold text-sky-800">シフト管理</h2>
             <button
               onClick={() => setShowDateSettings(!showDateSettings)}
-              className="inline-flex items-center px-4 py-2 bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors duration-200"
+              className="inline-flex items-center px-4 py-2 bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors duration-200 shadow-sm"
             >
               {showDateSettings ? (
                 <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -578,11 +578,11 @@ export default function AdminPage() {
           </div>
 
           {showDateSettings && (
-            <div className="mb-6 bg-slate-50 rounded-lg p-6 border border-slate-200">
-              <h3 className="text-lg font-medium text-slate-800 mb-4">シフト期間の設定</h3>
+            <div className="mb-6 bg-sky-50 rounded-lg p-6 border border-sky-200">
+              <h3 className="text-lg font-medium text-sky-800 mb-4">シフト期間の設定</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="startDate" className="block text-sm font-medium text-sky-700 mb-1">
                     開始日
                   </label>
                   <input
@@ -590,18 +590,18 @@ export default function AdminPage() {
                     id="startDate"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
+                    className="w-full px-4 py-2 border border-sky-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
                   />
                 </div>
                 <div>
-                  <label htmlFor="shiftDays" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="shiftDays" className="block text-sm font-medium text-sky-700 mb-1">
                     日数
                   </label>
                   <select
                     id="shiftDays"
                     value={shiftDays}
                     onChange={(e) => setShiftDays(Number(e.target.value))}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
+                    className="w-full px-4 py-2 border border-sky-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
                   >
                     <option value={7}>1週間 (7日)</option>
                     <option value={14}>2週間 (14日)</option>
@@ -616,9 +616,9 @@ export default function AdminPage() {
                   disabled={loading}
                   className={`
                     inline-flex items-center justify-center w-full md:w-auto px-6 py-2
-                    border border-transparent rounded-lg shadow-sm text-sm font-medium
-                    text-white bg-sky-600 hover:bg-sky-700
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500
+                    border border-transparent rounded-lg shadow-md text-sm font-medium
+                    text-white bg-cyan-600 hover:bg-cyan-700
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500
                     transition-colors duration-200
                     ${loading ? 'opacity-50 cursor-not-allowed' : ''}
                   `}
@@ -633,7 +633,7 @@ export default function AdminPage() {
                     </>
                   ) : '期間を保存して適用'}
                 </button>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-sky-600">
                   ※期間を変更すると、すべてのスタッフのシフト希望入力画面に反映されます。
                 </p>
               </div>
@@ -647,35 +647,35 @@ export default function AdminPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span className="ml-3 text-slate-600">読み込み中...</span>
+                <span className="ml-3 text-sky-600">読み込み中...</span>
               </div>
             </div>
           ) : staffData.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-gray-100">
+            <div className="overflow-x-auto rounded-lg border border-green-100">
+              <table className="min-w-full divide-y divide-green-200">
+                <thead className="bg-green-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
                       スタッフ名
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
                       確定状態
                     </th>
                     {dates.map(date => (
-                      <th key={date} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th key={date} className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
                         {formatDisplayDate(date)}
                       </th>
                     ))}
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
                       操作
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white divide-y divide-green-100">
                   {staffData.map((staff) => (
-                    <tr key={`staff-${staff.staff_id}`} className="hover:bg-slate-50 transition-colors duration-150">
+                    <tr key={`staff-${staff.staff_id}`} className="hover:bg-green-50 transition-colors duration-150">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{staff.name}</div>
+                        <div className="text-sm font-medium text-green-800">{staff.name}</div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {staff.isConfirmed ? (
@@ -683,7 +683,7 @@ export default function AdminPage() {
                             確定済み
                           </span>
                         ) : (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-800">
                             未確定
                           </span>
                         )}
@@ -691,20 +691,20 @@ export default function AdminPage() {
                       {dates.map(date => {
                         const shift = staff.shifts[date];
                         let cellContent = '未設定';
-                        let cellClass = 'bg-slate-50 text-slate-500';
+                        let cellClass = 'bg-gray-50 text-gray-600';
                         
                         if (shift) {
                           if (shift.isWorking) {
                             if (shift.isAllDay) {
                               cellContent = '全日OK';
-                              cellClass = 'bg-sky-50 text-sky-800';
+                              cellClass = 'bg-green-100 text-green-800';
                             } else {
                               cellContent = `${shift.startTime} - ${shift.endTime}`;
-                              cellClass = 'bg-green-50 text-green-800';
+                              cellClass = 'bg-emerald-100 text-emerald-800';
                             }
                           } else {
                             cellContent = '休み';
-                            cellClass = 'bg-red-50 text-red-800';
+                            cellClass = 'bg-red-100 text-red-800';
                           }
                         }
                         
@@ -723,7 +723,7 @@ export default function AdminPage() {
                           <button
                             onClick={() => toggleShiftConfirmation(staff.staff_id, staff.isConfirmed)}
                             disabled={updatingConfirmStatus === staff.staff_id}
-                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:opacity-50"
+                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:opacity-50"
                           >
                             {updatingConfirmStatus === staff.staff_id ? (
                               <span>処理中...</span>
@@ -742,22 +742,22 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="py-12 text-center">
-              <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="mx-auto h-12 w-12 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              <p className="mt-2 text-slate-500">スタッフデータがありません</p>
+              <p className="mt-2 text-sky-600">スタッフデータがありません</p>
             </div>
           )}
           
-          <div className="mt-6 space-y-1 text-sm text-slate-600">
+          <div className="mt-6 space-y-1 text-sm text-sky-600">
             <p className="flex items-center">
-              <svg className="h-4 w-4 mr-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 mr-1 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               セルをクリックしてシフトを編集できます
             </p>
             <p className="flex items-center">
-              <svg className="h-4 w-4 mr-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 mr-1 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               「確定済み」はスタッフがシフト希望を確定したことを示します
@@ -766,16 +766,16 @@ export default function AdminPage() {
         </div>
 
         {/* グループ情報セクション */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
-          <h2 className="text-xl font-semibold text-slate-800 mb-6">グループ情報</h2>
+        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6 mt-6">
+          <h2 className="text-xl font-semibold text-sky-800 mb-6">グループ情報</h2>
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-slate-800 mb-2">アクセスキー</h3>
-              <div className="bg-slate-50 rounded-lg p-4 flex items-center justify-between">
-                <code className="font-mono text-sm text-slate-800 break-all">{group.accessKey}</code>
+              <h3 className="text-lg font-medium text-sky-700 mb-2">アクセスキー</h3>
+              <div className="bg-sky-50 rounded-lg p-4 flex items-center justify-between">
+                <code className="font-mono text-sm text-sky-800 break-all">{group.accessKey}</code>
                 <button
                   onClick={copyAccessKeyToClipboard}
-                  className="ml-4 inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200"
+                  className="ml-4 inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200"
                 >
                   <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
@@ -783,18 +783,18 @@ export default function AdminPage() {
                   {copyAccessKeySuccess || 'コピー'}
                 </button>
               </div>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-sky-600">
                 このキーを共有して、メンバーをグループに招待できます。
               </p>
             </div>
             
             <div>
-              <h3 className="text-lg font-medium text-slate-800 mb-2">管理者キー</h3>
-              <div className="bg-slate-50 rounded-lg p-4 flex items-center justify-between">
-                <code className="font-mono text-sm text-slate-800 break-all">{group.adminKey}</code>
+              <h3 className="text-lg font-medium text-sky-700 mb-2">管理者キー</h3>
+              <div className="bg-sky-50 rounded-lg p-4 flex items-center justify-between">
+                <code className="font-mono text-sm text-sky-800 break-all">{group.adminKey}</code>
                 <button
                   onClick={copyAdminKeyToClipboard}
-                  className="ml-4 inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200"
+                  className="ml-4 inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200"
                 >
                   <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
@@ -802,7 +802,7 @@ export default function AdminPage() {
                   {copyAdminKeySuccess || 'コピー'}
                 </button>
               </div>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-sky-600">
                 このキーは管理者専用です。安全に保管してください。
               </p>
             </div>
@@ -810,28 +810,28 @@ export default function AdminPage() {
         </div>
 
         {/* スタッフ管理セクション */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
-          <h2 className="text-xl font-semibold text-slate-800 mb-6">スタッフ管理</h2>
+        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6 mt-6">
+          <h2 className="text-xl font-semibold text-sky-800 mb-6">スタッフ管理</h2>
           {staffData.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
+            <div className="overflow-x-auto rounded-lg border border-green-100">
+              <table className="min-w-full divide-y divide-green-200">
                 <thead>
                   <tr>
-                    <th className="px-4 py-3 bg-slate-50 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 bg-green-50 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
                       スタッフ名
                     </th>
-                    <th className="px-4 py-3 bg-slate-50 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 bg-green-50 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
                       状態
                     </th>
-                    <th className="px-4 py-3 bg-slate-50 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 bg-green-50 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
                       操作
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white divide-y divide-green-100">
                   {staffData.map((staff) => (
-                    <tr key={`staff-${staff.staff_id}`} className="hover:bg-slate-50 transition-colors duration-150">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900">
+                    <tr key={`staff-management-${staff.staff_id}`} className="hover:bg-green-50 transition-colors duration-150">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-800">
                         {staff.name}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -840,7 +840,7 @@ export default function AdminPage() {
                             確定済み
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
                             未確定
                           </span>
                         )}
@@ -848,7 +848,7 @@ export default function AdminPage() {
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
                         <button
                           onClick={() => handleDeleteStaff(staff.staff_id)}
-                          className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+                          className="inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
                         >
                           <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -863,14 +863,18 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="py-12 text-center">
-              <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="mx-auto h-12 w-12 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              <p className="mt-2 text-slate-500">スタッフデータがありません</p>
+              <p className="mt-2 text-sky-600">スタッフデータがありません</p>
             </div>
           )}
         </div>
       </main>
+      
+      <div className="mt-6 text-center text-xs text-sky-500 pb-6">
+        <p>© 2025 シフト作成アプリ All Rights Reserved.</p>
+      </div>
 
       {selectedStaff && (
         <ShiftModal 
