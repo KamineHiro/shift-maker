@@ -8,54 +8,89 @@ interface ShiftTableProps {
 }
 
 const ShiftTable: React.FC<ShiftTableProps> = ({ dates, staffData, onCellClick }) => {
+  // 日付フォーマット関数
+  const formatDisplayDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+    const weekday = weekdays[date.getDay()];
+    
+    return `${month}/${day}(${weekday})`;
+  };
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border border-gray-200">
+    <div className="overflow-x-auto rounded-lg shadow border border-gray-200">
+      <table className="min-w-full bg-white">
         <thead>
           <tr>
-            <th className="px-4 py-2 border border-gray-200 bg-gray-100">スタッフ名</th>
-            {dates.map((date) => (
-              <th 
-                key={date} 
-                className="px-4 py-2 border border-gray-200 bg-green-500 text-white"
-              >
-                {date}
-              </th>
-            ))}
+            <th className="px-4 py-3 text-left text-sm font-medium bg-gray-50 border-b border-r">
+              日付
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-medium bg-gray-50 border-b border-r">
+              シフト
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-medium bg-gray-50 border-b">
+              詳細
+            </th>
           </tr>
         </thead>
         <tbody>
-          {staffData.map((staff) => (
-            <tr key={staff.staff_id}>
-              <td className="px-4 py-2 border border-gray-200 font-medium">
-                {staff.name}
-              </td>
-              {dates.map((date) => {
-                const shift = staff.shifts[date];
-                return (
-                  <td 
-                    key={`${staff.staff_id}-${date}`} 
-                    className="px-4 py-2 border border-gray-200 text-center cursor-pointer hover:bg-gray-100"
-                    onClick={() => onCellClick(staff.staff_id, date)}
-                  >
-                    {shift ? (
-                      !shift.isWorking ? (
-                        <span className="text-red-500 font-bold">×</span>
-                      ) : (
-                        <span>
-                          {shift.startTime}～{shift.endTime}
-                        </span>
-                      )
-                    ) : (
-                      <span className="text-gray-300">-</span>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+          {dates.map((date, index) => {
+            const staff = staffData[0]; // 特定のスタッフのシフトを表示
+            const shift = staff?.shifts[date];
+            
+            let shiftContent = '休み';
+            let shiftClass = 'bg-red-100';
+            let shiftDetails = '休み';
+            
+            if (shift) {
+              if (shift.isWorking) {
+                if (shift.isAllDay) {
+                  shiftContent = '全日OK';
+                  shiftClass = 'bg-green-100';
+                  shiftDetails = '勤務時間: 全日';
+                } else {
+                  shiftContent = `${shift.startTime} - ${shift.endTime}`;
+                  shiftClass = 'bg-green-100';
+                  shiftDetails = `勤務時間: ${shift.startTime} - ${shift.endTime}`;
+                }
+              }
+            } else {
+              shiftContent = '未設定';
+              shiftClass = 'bg-gray-50';
+              shiftDetails = '未設定';
+            }
+            
+            return (
+              <tr key={date} className="hover:bg-gray-50 transition-colors duration-150">
+                <td 
+                  className="px-4 py-4 whitespace-nowrap border-b border-r"
+                  onClick={() => staff && onCellClick(staff.staff_id, date)}
+                >
+                  {formatDisplayDate(date)}
+                </td>
+                <td 
+                  className={`px-4 py-4 whitespace-nowrap cursor-pointer border-b border-r ${shiftClass}`}
+                  onClick={() => staff && onCellClick(staff.staff_id, date)}
+                >
+                  {shiftContent}
+                </td>
+                <td 
+                  className="px-4 py-4 whitespace-nowrap border-b"
+                  onClick={() => staff && onCellClick(staff.staff_id, date)}
+                >
+                  {shiftDetails}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+      <div className="p-2 text-xs text-gray-500">
+        ※セルをクリックしてシフトを編集できます
+      </div>
     </div>
   );
 };
