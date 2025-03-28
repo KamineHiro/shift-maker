@@ -1,151 +1,107 @@
-# シフト作成アプリ
+# シフトメーカー (Shift Maker)
 
-シフト作成アプリは、グループを作成してURLを共有するだけで、簡単にシフト希望を管理できるツールです。
+シフトメーカーは、スタッフのシフト希望を簡単に収集・管理できるウェブアプリケーションです。スタッフは希望のシフトを入力し、管理者はそれらを確認して最終的なシフト表を作成できます。
 
-## 機能
+## デモサイト
 
-- **グループ作成**: 誰でも新しいグループを作成できます
-- **簡単アクセス**: アクセスキーを共有するだけで、メンバーをグループに招待できます
-- **シフト希望入力**: メンバーは簡単にシフト希望を入力できます
-- **管理者機能**: 管理者はすべてのメンバーのシフトを一覧で確認・編集できます
+アプリケーションのデモは以下のURLでアクセスできます：
+[https://shift-maker-nu.vercel.app](https://shift-maker-nu.vercel.app)
+
+### テストアクセス情報
+
+デモサイトを試すための情報:
+- テストグループへのアクセスキー: `testgroup`
+- 管理者キー: `testadmin`
+
+## 主な機能
+
+- **シフト希望の管理**: スタッフは日ごとの勤務可否や時間帯を入力できます
+- **グループ管理**: 複数のスタッフをグループとして管理できます
+- **シフト確認・承認**: 管理者はスタッフのシフト希望を確認し、最終的なシフトを設定できます
+- **レスポンシブデザイン**: スマートフォン、タブレット、PCなど様々なデバイスに対応
 
 ## 技術スタック
 
-- **フロントエンド**
+- **フロントエンド**:
   - Next.js 15.2.2
   - React 19
   - TypeScript
   - Tailwind CSS
-  - DaisyUI
-  - Headless UI
-  - Hero Icons
-- **バックエンド/データベース**
-  - Supabase (PostgreSQLデータベース)
 
-## セットアップ
+- **バックエンド**:
+  - Supabase (PostgreSQL)
+  - Next.js API Routes
 
-### 環境変数
+- **認証**:
+  - Supabase Authentication
 
-`.env.local`ファイルを作成し、以下の環境変数を設定してください：
+## ローカル開発環境のセットアップ
 
+### 前提条件
+
+- Node.js 18.0.0以上
+- npm または yarn
+
+### インストール手順
+
+1. リポジトリをクローン
+```bash
+git clone https://github.com/yourusername/shift-maker.git
+cd shift-maker-project
 ```
-NEXT_PUBLIC_SUPABASE_URL=あなたのSupabaseのURL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=あなたのSupabaseの匿名キー
-```
 
-### インストール
-
+2. 依存パッケージをインストール
 ```bash
 npm install
+# または
+yarn install
 ```
 
-### 開発サーバーの起動
+3. 環境変数の設定
+`.env.local`ファイルを作成し、以下の内容を設定:
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
+4. 開発サーバーを起動
 ```bash
 npm run dev
+# または
+yarn dev
 ```
 
-### ビルド
+5. ブラウザで http://localhost:3000 にアクセス
+
+## プロジェクト構成
+
+```
+/src
+  /app          # Next.jsのページコンポーネント
+  /components   # 再利用可能なコンポーネント
+  /contexts     # Reactコンテキスト
+  /hooks        # カスタムフック
+  /lib          # ユーティリティ関数
+  /services     # APIサービス
+  /types        # TypeScript型定義
+```
+
+## デプロイ
+
+このアプリケーションはVercelなどのNext.js対応のホスティングサービスに簡単にデプロイできます。
+
+現在のデプロイ先:
+- [https://shift-maker-nu.vercel.app](https://shift-maker-nu.vercel.app)
 
 ```bash
-npm run build
+# Vercelへのデプロイ例
+vercel
 ```
 
-## データベース設定
+## ライセンス
 
-Supabaseで以下のテーブルを作成してください：
+MIT
 
-### groupsテーブル
+## 作者
 
-```sql
-CREATE TABLE groups (
-  id UUID PRIMARY KEY,
-  name TEXT NOT NULL,
-  access_key TEXT NOT NULL UNIQUE,
-  admin_key TEXT NOT NULL UNIQUE,
-  admin_password TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
-### staffテーブル
-
-```sql
-CREATE TABLE staff (
-  id UUID PRIMARY KEY,
-  name TEXT NOT NULL,
-  group_id UUID REFERENCES groups(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
-### shiftsテーブル
-
-```sql
-CREATE TABLE shifts (
-  id UUID PRIMARY KEY,
-  staff_id UUID REFERENCES staff(id) ON DELETE CASCADE,
-  date TEXT NOT NULL,
-  start_time TEXT,
-  end_time TEXT,
-  is_off BOOLEAN NOT NULL DEFAULT FALSE,
-  note TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(staff_id, date)
-);
-```
-
-## 使い方
-
-1. トップページでグループを作成するか、既存のグループにアクセスします
-2. グループを作成した場合は、管理者キーを安全に保管してください
-3. アクセスキーを共有して、メンバーをグループに招待します
-4. メンバーはアクセスキーを使ってグループにアクセスし、シフト希望を入力できます
-5. 管理者は管理者キーを使って管理画面にアクセスし、すべてのシフトを管理できます
-
-## Supabaseの設定
-
-1. [Supabase](https://supabase.com/)にアクセスして、アカウントを作成します。
-2. 新しいプロジェクトを作成します。
-3. プロジェクトが作成されたら、以下のテーブルを作成します：
-
-### staffテーブル
-```sql
-CREATE TABLE staff (
-  id UUID PRIMARY KEY,
-  name TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
-);
-```
-
-### shiftsテーブル
-```sql
-CREATE TABLE shifts (
-  id UUID PRIMARY KEY,
-  staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
-  date TEXT NOT NULL,
-  start_time TEXT,
-  end_time TEXT,
-  is_off BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-  UNIQUE(staff_id, date)
-);
-```
-
-4. プロジェクトの設定から、API URLとAnon Keyを取得します。
-5. `.env.local`ファイルに以下の環境変数を設定します：
-
-```
-NEXT_PUBLIC_SUPABASE_URL=あなたのSupabase URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=あなたのSupabase Anon Key
-```
-
-## 開発環境のセットアップ
-
-```bash
-# 依存関係のインストール
-npm install
-
-# 開発サーバーの起動
-npm run dev
-```
+- KamineHiro
