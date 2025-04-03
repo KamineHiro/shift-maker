@@ -541,16 +541,19 @@ export const shiftService = {
               return false;
             }
             
-            let startTime = '09:00';
-            let endTime = '22:00';
+            const startTime = '09:00';
+            const endTime = '22:00';
             let note = '';
             
-            // 既存のシフトがある場合は時間やメモを引き継ぐ
+            // 既存のシフトがある場合
             if (existingShift) {
               console.log(`既存シフト更新: ${date}, is_off=${!isWorking}`);
-              startTime = existingShift.start_time || startTime;
-              endTime = existingShift.end_time || endTime;
+              
+              // メモ情報は引き継ぐ
               note = existingShift.note || note;
+              
+              // 全日勤務 or 休みのどちらの場合も、時間は標準設定（09:00-22:00）にする
+              // これにより一貫性が保たれ、全日勤務→休み→全日勤務のような切り替えでも問題なくなる
               
               // 更新
               const { data: updateData, error: updateError } = await supabase

@@ -140,7 +140,7 @@ export default function GroupPage() {
     return () => {
       isSubscribed = false;
     };
-  }, [group?.groupId]); // shiftApiとstaffApiを依存配列から削除
+  }, [group?.groupId]); // eslint-disable-line react-hooks/exhaustive-deps
   
   // 既存のスタッフを選択
   const handleSelectExistingStaff = async () => {

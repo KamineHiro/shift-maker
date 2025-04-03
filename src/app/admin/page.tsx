@@ -39,6 +39,7 @@ export default function AdminPage() {
   const [copyAccessKeySuccess, setCopyAccessKeySuccess] = useState<string | null>(null);
   const [copyAdminKeySuccess, setCopyAdminKeySuccess] = useState<string | null>(null);
   const [updatingConfirmStatus, setUpdatingConfirmStatus] = useState<string | null>(null);
+  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
   
   // グループ情報がない場合、または管理者でない場合はトップページにリダイレクト
   useEffect(() => {
@@ -140,7 +141,7 @@ export default function AdminPage() {
     return () => {
       isSubscribed = false;
     };
-  }, [group?.groupId]); // 依存配列からAPIインスタンスを削除
+  }, [group?.groupId]); // eslint-disable-line react-hooks/exhaustive-deps
   
   // 日付範囲を保存
   const handleSaveDateRange = async () => {
@@ -397,7 +398,7 @@ export default function AdminPage() {
       if (initialTimeout) clearTimeout(initialTimeout);
       if (interval) clearInterval(interval);
     };
-  }, [group?.groupId]); // shiftApiを依存配列から削除
+  }, [group?.groupId]); // eslint-disable-line react-hooks/exhaustive-deps
   
   // シフト確定状態を切り替える関数
   const toggleShiftConfirmation = async (staffId: string, currentStatus: boolean | undefined) => {
@@ -651,94 +652,112 @@ export default function AdminPage() {
               </div>
             </div>
           ) : staffData.length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border border-green-100">
-              <table className="min-w-full divide-y divide-green-200">
-                <thead className="bg-green-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
-                      スタッフ名
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
-                      確定状態
-                    </th>
-                    {dates.map(date => (
-                      <th key={date} className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
-                        {formatDisplayDate(date)}
+            <div className="relative">
+              <div className="overflow-x-auto rounded-lg border border-green-100 max-w-full" style={{ position: 'relative' }}>
+                <table className="min-w-full divide-y divide-green-200 table-fixed border-collapse">
+                  <thead className="bg-green-50">
+                    <tr>
+                      <th className="sticky left-0 z-10 bg-green-50 px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider border-r border-green-200 min-w-[100px] w-[100px]">
+                        スタッフ名
                       </th>
-                    ))}
-                    <th className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-green-100">
-                  {staffData.map((staff) => (
-                    <tr key={`staff-${staff.staff_id}`} className="hover:bg-green-50 transition-colors duration-150">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-sm font-medium text-green-800">{staff.name}</div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {staff.isConfirmed ? (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            確定済み
-                          </span>
-                        ) : (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-800">
-                            未確定
-                          </span>
-                        )}
-                      </td>
-                      {dates.map(date => {
-                        const shift = staff.shifts[date];
-                        let cellContent = '未設定';
-                        let cellClass = 'bg-gray-50 text-gray-600';
-                        
-                        if (shift) {
-                          if (shift.isWorking) {
-                            if (shift.isAllDay) {
-                              cellContent = '全日OK';
-                              cellClass = 'bg-green-100 text-green-800';
-                            } else {
-                              cellContent = `${shift.startTime} - ${shift.endTime}`;
-                              cellClass = 'bg-emerald-100 text-emerald-800';
-                            }
-                          } else {
-                            cellContent = '休み';
-                            cellClass = 'bg-red-100 text-red-800';
-                          }
-                        }
-                        
-                        return (
-                          <td 
-                            key={`${staff.staff_id}-${date}`}
-                            className={`px-4 py-3 text-sm ${cellClass} cursor-pointer transition-opacity duration-200 hover:opacity-80`}
-                            onClick={() => handleCellClick(staff.staff_id, date)}
-                          >
-                            {cellContent}
-                          </td>
-                        );
-                      })}
-                      <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => toggleShiftConfirmation(staff.staff_id, staff.isConfirmed)}
-                            disabled={updatingConfirmStatus === staff.staff_id}
-                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:opacity-50"
-                          >
-                            {updatingConfirmStatus === staff.staff_id ? (
-                              <span>処理中...</span>
-                            ) : staff.isConfirmed ? (
-                              <span>確定解除</span>
-                            ) : (
-                              <span>確定する</span>
-                            )}
-                          </button>
-                        </div>
-                      </td>
+                      <th className="sticky left-[100px] z-10 bg-green-50 px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider border-r border-green-200 min-w-[100px] w-[100px]">
+                        確定状態
+                      </th>
+                      {dates.map(date => (
+                        <th key={date} className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
+                          {formatDisplayDate(date)}
+                        </th>
+                      ))}
+                      <th className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
+                        操作
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-green-100">
+                    {staffData.map((staff) => (
+                      <tr 
+                        key={`staff-${staff.staff_id}`} 
+                        className="hover:bg-green-50 transition-colors duration-150"
+                        onMouseEnter={() => setHoveredRowId(staff.staff_id)}
+                        onMouseLeave={() => setHoveredRowId(null)}
+                      >
+                        <td 
+                          className={`sticky left-0 z-10 px-4 py-3 whitespace-nowrap border-r border-green-100 min-w-[100px] w-[100px] transition-colors duration-150 ${
+                            hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'
+                          }`}
+                        >
+                          <div className="text-sm font-medium text-green-800">{staff.name}</div>
+                        </td>
+                        <td 
+                          className={`sticky left-[100px] z-10 px-4 py-3 whitespace-nowrap border-r border-green-100 min-w-[100px] w-[100px] transition-colors duration-150 ${
+                            hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'
+                          }`}
+                        >
+                          {staff.isConfirmed ? (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                              確定済み
+                            </span>
+                          ) : (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-800">
+                              未確定
+                            </span>
+                          )}
+                        </td>
+                        {dates.map(date => {
+                          const shift = staff.shifts[date];
+                          let cellContent = '未設定';
+                          let cellClass = 'bg-gray-50 text-gray-600';
+                          
+                          if (shift) {
+                            if (shift.isWorking) {
+                              if (shift.isAllDay) {
+                                cellContent = '全日OK';
+                                cellClass = 'bg-green-100 text-green-800';
+                              } else {
+                                cellContent = `${shift.startTime} - ${shift.endTime}`;
+                                cellClass = 'bg-emerald-100 text-emerald-800';
+                              }
+                            } else {
+                              cellContent = '休み';
+                              cellClass = 'bg-red-100 text-red-800';
+                            }
+                          }
+                          
+                          return (
+                            <td 
+                              key={`${staff.staff_id}-${date}`}
+                              className={`px-4 py-3 min-h-full text-sm ${cellClass} cursor-pointer transition-opacity duration-200 hover:opacity-80`}
+                              onClick={() => handleCellClick(staff.staff_id, date)}
+                            >
+                              {cellContent}
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => toggleShiftConfirmation(staff.staff_id, staff.isConfirmed)}
+                              disabled={updatingConfirmStatus === staff.staff_id}
+                              className="inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:opacity-50"
+                            >
+                              {updatingConfirmStatus === staff.staff_id ? (
+                                <span>処理中...</span>
+                              ) : staff.isConfirmed ? (
+                                <span>確定解除</span>
+                              ) : (
+                                <span>確定する</span>
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-2 text-xs text-gray-500">
+                ※横にスクロールしてもスタッフ名と確定状態は固定されます
+              </div>
             </div>
           ) : (
             <div className="py-12 text-center">
