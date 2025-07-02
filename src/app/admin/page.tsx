@@ -516,51 +516,10 @@ export default function AdminPage() {
           </p>
         </div>
 
-        {/* スタッフ追加フォーム */}
-        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-sky-800 mb-4">スタッフ追加</h2>
-          <form onSubmit={handleAddStaff} className="flex items-end gap-4">
-            <div className="flex-grow">
-              <label htmlFor="newStaffName" className="block text-sm font-medium text-sky-700 mb-1">
-                スタッフ名
-              </label>
-              <input
-                id="newStaffName"
-                type="text"
-                value={newStaffName}
-                onChange={(e) => setNewStaffName(e.target.value)}
-                className="w-full px-4 py-2 border border-sky-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
-                placeholder="新しいスタッフの名前"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading || !newStaffName.trim()}
-              className={`
-                inline-flex items-center px-6 py-2 border border-transparent rounded-lg shadow-md
-                text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700
-                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500
-                transition-colors duration-200
-                ${loading || !newStaffName.trim() ? 'opacity-50 cursor-not-allowed' : ''}
-              `}
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  追加中...
-                </>
-              ) : '追加'}
-            </button>
-          </form>
-        </div>
-
         {/* シフト管理セクション */}
         <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-sky-800">シフト管理</h2>
+            <h2 className="text-xl font-semibold text-sky-800">シフト管理表</h2>
             <button
               onClick={() => setShowDateSettings(!showDateSettings)}
               className="inline-flex items-center px-4 py-2 bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors duration-200 shadow-sm"
@@ -657,12 +616,8 @@ export default function AdminPage() {
                 <table className="min-w-full divide-y divide-green-200 table-fixed border-collapse">
                   <thead className="bg-green-50">
                     <tr>
-                      <th className="sticky left-0 z-10 bg-green-50 px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider border-r border-green-200 min-w-[100px] w-[100px]">
-                        スタッフ名
-                      </th>
-                      <th className="sticky left-[100px] z-10 bg-green-50 px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider border-r border-green-200 min-w-[100px] w-[100px]">
-                        確定状態
-                      </th>
+                      <th className="sticky left-0 z-10 bg-green-50 px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider w-[100px] min-w-[100px]">スタッフ名</th>
+                      <th className="sticky left-[100px] z-10 bg-green-50 px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider border-l border-green-200 w-[100px] min-w-[100px]">確定状態</th>
                       {dates.map(date => (
                         <th key={date} className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
                           {formatDisplayDate(date)}
@@ -682,16 +637,12 @@ export default function AdminPage() {
                         onMouseLeave={() => setHoveredRowId(null)}
                       >
                         <td 
-                          className={`sticky left-0 z-10 px-4 py-3 whitespace-nowrap border-r border-green-100 min-w-[100px] w-[100px] transition-colors duration-150 ${
-                            hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'
-                          }`}
+                          className={`sticky left-0 z-10 px-4 py-3 whitespace-nowrap w-[100px] min-w-[100px] transition-colors duration-150 ${hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'}`}
                         >
                           <div className="text-sm font-medium text-green-800">{staff.name}</div>
                         </td>
                         <td 
-                          className={`sticky left-[100px] z-10 px-4 py-3 whitespace-nowrap border-r border-green-100 min-w-[100px] w-[100px] transition-colors duration-150 ${
-                            hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'
-                          }`}
+                          className={`sticky left-[100px] z-10 px-4 py-3 whitespace-nowrap border-l border-green-100 w-[100px] min-w-[100px] transition-colors duration-150 ${hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'}`}
                         >
                           {staff.isConfirmed ? (
                             <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
@@ -753,6 +704,68 @@ export default function AdminPage() {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="border-t-2 border-slate-200">
+                    <tr>
+                      <td className="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-slate-700">ランチ</td>
+                      <td className="sticky left-[100px] z-10 bg-white"></td>
+                      {dates.map(date => {
+                        let lunchCount = 0;
+                        staffData.forEach(staff => {
+                          const shift = staff.shifts[date];
+                          if (!shift || !shift.isWorking) return;
+                          if (shift.isAllDay) {
+                            lunchCount++;
+                            return;
+                          }
+                          // 時間帯がランチ（10:00-16:00）に少しでもかぶっていればカウント
+                          const start = shift.startTime ? parseInt(shift.startTime.replace(':', ''), 10) : null;
+                          const end = shift.endTime ? parseInt(shift.endTime.replace(':', ''), 10) : null;
+                          if (start !== null && end !== null) {
+                            // 1000〜1600の間に少しでも勤務していればOK
+                            if (!(end <= 1000 || start >= 1600)) {
+                              lunchCount++;
+                            }
+                          }
+                        });
+                        return (
+                          <td key={date} className="px-4 py-3 text-center font-medium text-slate-600 bg-white">
+                            {lunchCount}
+                          </td>
+                        );
+                      })}
+                      <td className="bg-white"></td>
+                    </tr>
+                    <tr>
+                      <td className="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-slate-700">ディナー</td>
+                      <td className="sticky left-[100px] z-10 bg-white"></td>
+                      {dates.map(date => {
+                        let dinnerCount = 0;
+                        staffData.forEach(staff => {
+                          const shift = staff.shifts[date];
+                          if (!shift || !shift.isWorking) return;
+                          if (shift.isAllDay) {
+                            dinnerCount++;
+                            return;
+                          }
+                          // 時間帯がディナー（16:00-22:00）に少しでもかぶっていればカウント
+                          const start = shift.startTime ? parseInt(shift.startTime.replace(':', ''), 10) : null;
+                          const end = shift.endTime ? parseInt(shift.endTime.replace(':', ''), 10) : null;
+                          if (start !== null && end !== null) {
+                            // 1600〜2200の間に少しでも勤務していればOK
+                            if (!(end <= 1600 || start >= 2200)) {
+                              dinnerCount++;
+                            }
+                          }
+                        });
+                        return (
+                          <td key={date} className="px-4 py-3 text-center font-medium text-slate-600 bg-white">
+                            {dinnerCount}
+                          </td>
+                        );
+                      })}
+                      <td className="bg-white"></td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
               <div className="mt-2 text-xs text-gray-500">
@@ -826,6 +839,47 @@ export default function AdminPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* スタッフ追加フォーム */}
+        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6 mt-6">
+          <h2 className="text-xl font-semibold text-sky-800 mb-4">スタッフ追加</h2>
+          <form onSubmit={handleAddStaff} className="flex items-end gap-4">
+            <div className="flex-grow">
+              <label htmlFor="newStaffName" className="block text-sm font-medium text-sky-700 mb-1">
+                スタッフ名
+              </label>
+              <input
+                id="newStaffName"
+                type="text"
+                value={newStaffName}
+                onChange={(e) => setNewStaffName(e.target.value)}
+                className="w-full px-4 py-2 border border-sky-300 rounded-lg shadow-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200"
+                placeholder="新しいスタッフの名前"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !newStaffName.trim()}
+              className={`
+                inline-flex items-center px-6 py-2 border border-transparent rounded-lg shadow-md
+                text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500
+                transition-colors duration-200
+                ${loading || !newStaffName.trim() ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  追加中...
+                </>
+              ) : '追加'}
+            </button>
+          </form>
         </div>
 
         {/* スタッフ管理セクション */}
