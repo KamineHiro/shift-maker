@@ -43,18 +43,16 @@ export default function AdminPage() {
   
   // グループ情報がない場合、または管理者でない場合はトップページにリダイレクト
   useEffect(() => {
+    if (group === undefined) return; // まだ取得中なら何もしない
     if (!group) {
-      const redirect = async () => {
-        await router.push('/');
-      };
-      redirect();
-    } else if (!group.isAdmin) {
-      const redirect = async () => {
-        await router.push('/group');
-      };
-      redirect();
+      router.replace('/');
+      return;
     }
-  }, [group, router]);
+    if (!group.isAdmin) {
+      router.replace('/group');
+      return;
+    }
+  }, [group]);
   
   // 初期データの読み込み
   useEffect(() => {
@@ -457,7 +455,7 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-sky-800">
+              <h1 className="text-2xl sm:text-2xl font-semibold text-sky-800">
                 シフト作成アプリ
               </h1>
               <p className="mt-1 text-sm text-sky-600">
@@ -502,22 +500,8 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* データ管理セクション */}
-        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-sky-800">データ管理</h2>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-sky-100 text-sky-800">
-              自動クリーンアップ有効
-            </span>
-          </div>
-          <p className="text-sky-600 text-sm leading-relaxed">
-            シフトデータは毎日自動的にクリーンアップされ、6週間以上前のデータは削除されます。
-            これにより、データベースの容量を効率的に管理し、アプリケーションのパフォーマンスを維持します。
-          </p>
-        </div>
-
         {/* シフト管理セクション */}
-        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6">
+        <div>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-sky-800">シフト管理表</h2>
             <button
@@ -612,18 +596,17 @@ export default function AdminPage() {
             </div>
           ) : staffData.length > 0 ? (
             <div className="relative">
-              <div className="overflow-x-auto rounded-lg border border-green-100 max-w-full" style={{ position: 'relative' }}>
-                <table className="min-w-full divide-y divide-green-200 table-fixed border-collapse">
+              <div className="overflow-x-auto rounded-lg border border-green-100" style={{ position: 'relative' }}>
+                <table className="min-w-[400px] sm:min-w-full divide-y divide-green-200 table-fixed border-collapse">
                   <thead className="bg-green-50">
                     <tr>
-                      <th className="sticky left-0 z-10 bg-green-50 px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider w-[100px] min-w-[100px]">スタッフ名</th>
-                      <th className="sticky left-[100px] z-10 bg-green-50 px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider border-l border-green-200 w-[100px] min-w-[100px]">確定状態</th>
+                      <th className="sticky left-0 top-0 z-10 bg-green-50 px-1 py-1 sm:px-4 sm:py-1 text-left text-xs sm:text-sm font-medium text-green-700 uppercase tracking-wider min-w-[80px] w-[80px] sm:min-w-[100px] sm:w-[100px]">スタッフ名</th>
                       {dates.map(date => (
-                        <th key={date} className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
+                        <th key={date} className="px-1 py-1 sm:px-4 sm:py-1 text-left text-[10px] sm:text-xs font-medium text-green-700 uppercase tracking-wider min-w-[36px] w-[36px] sm:min-w-[100px] sm:w-[100px]">
                           {formatDisplayDate(date)}
                         </th>
                       ))}
-                      <th className="px-4 py-3 text-left text-xs font-medium text-green-700 uppercase tracking-wider">
+                      <th className="px-1 py-1 sm:px-4 sm:py-1 text-left text-xs sm:text-sm font-medium text-green-700 uppercase tracking-wider min-w-[60px] w-[60px] sm:min-w-[100px] sm:w-[100px]">
                         操作
                       </th>
                     </tr>
@@ -637,28 +620,19 @@ export default function AdminPage() {
                         onMouseLeave={() => setHoveredRowId(null)}
                       >
                         <td 
-                          className={`sticky left-0 z-10 px-4 py-3 whitespace-nowrap w-[100px] min-w-[100px] transition-colors duration-150 ${hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'}`}
+                          className={`sticky left-0 top-0 z-10 px-1 py-1 sm:px-4 sm:py-1 whitespace-nowrap min-w-[80px] w-[80px] sm:min-w-[100px] sm:w-[100px] transition-colors duration-150 flex items-center min-h-[40px] sm:min-h-[60px] overflow-hidden ${hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'}`}
                         >
-                          <div className="text-sm font-medium text-green-800">{staff.name}</div>
-                        </td>
-                        <td 
-                          className={`sticky left-[100px] z-10 px-4 py-3 whitespace-nowrap border-l border-green-100 w-[100px] min-w-[100px] transition-colors duration-150 ${hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'}`}
-                        >
+                          <span className="flex-1 min-w-0 max-w-[4em] truncate text-xs sm:text-sm font-medium text-green-800">{staff.name}</span>
                           {staff.isConfirmed ? (
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                              確定済み
-                            </span>
+                            <span className="ml-auto min-w-[16px] max-w-[20px] h-6 flex items-center justify-center px-1 text-center text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 flex-shrink-0">確</span>
                           ) : (
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-800">
-                              未確定
-                            </span>
+                            <span className="ml-auto min-w-[16px] max-w-[20px] h-6 flex items-center justify-center px-1 text-center text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-800 flex-shrink-0">未</span>
                           )}
                         </td>
                         {dates.map(date => {
                           const shift = staff.shifts[date];
                           let cellContent = '未設定';
                           let cellClass = 'bg-gray-50 text-gray-600';
-                          
                           if (shift) {
                             if (shift.isWorking) {
                               if (shift.isAllDay) {
@@ -673,23 +647,22 @@ export default function AdminPage() {
                               cellClass = 'bg-red-100 text-red-800';
                             }
                           }
-                          
                           return (
                             <td 
                               key={`${staff.staff_id}-${date}`}
-                              className={`px-4 py-3 min-h-full text-sm ${cellClass} cursor-pointer transition-opacity duration-200 hover:opacity-80`}
+                              className={`px-1 py-1 sm:px-4 sm:py-1 min-h-[30px] sm:min-h-[50px] text-[10px] sm:text-xs ${cellClass} cursor-pointer transition-opacity duration-200 hover:opacity-80 min-w-[36px] w-[36px] sm:min-w-[100px] sm:w-[100px] align-middle`}
                               onClick={() => handleCellClick(staff.staff_id, date)}
                             >
                               {cellContent}
                             </td>
                           );
                         })}
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <td className="px-1 py-1 sm:px-4 sm:py-1 whitespace-nowrap text-xs sm:text-sm min-w-[60px] w-[60px] sm:min-w-[100px] sm:w-[100px]">
                           <div className="flex space-x-2">
                             <button
                               onClick={() => toggleShiftConfirmation(staff.staff_id, staff.isConfirmed)}
                               disabled={updatingConfirmStatus === staff.staff_id}
-                              className="inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:opacity-50"
+                              className="inline-flex items-center px-2 sm:px-3 py-1 border border-transparent rounded-lg shadow-sm text-xs sm:text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:opacity-50"
                             >
                               {updatingConfirmStatus === staff.staff_id ? (
                                 <span>処理中...</span>
@@ -706,8 +679,7 @@ export default function AdminPage() {
                   </tbody>
                   <tfoot className="border-t-2 border-slate-200">
                     <tr>
-                      <td className="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-slate-700">ランチ</td>
-                      <td className="sticky left-[100px] z-10 bg-white"></td>
+                      <td className="sticky left-0 z-10 bg-white px-1 py-1 sm:px-4 sm:py-1 font-semibold text-slate-700 min-w-[80px] w-[80px] sm:min-w-[100px] sm:w-[100px]">ランチ</td>
                       {dates.map(date => {
                         let lunchCount = 0;
                         staffData.forEach(staff => {
@@ -728,16 +700,13 @@ export default function AdminPage() {
                           }
                         });
                         return (
-                          <td key={date} className="px-4 py-3 text-center font-medium text-slate-600 bg-white">
-                            {lunchCount}
-                          </td>
+                          <td key={date} className="px-1 py-1 sm:px-4 sm:py-1 text-center font-medium text-slate-600 bg-white text-[10px] sm:text-xs min-w-[36px] w-[36px] sm:min-w-[100px] sm:w-[100px]">{lunchCount}</td>
                         );
                       })}
-                      <td className="bg-white"></td>
+                      <td className="min-w-[80px] w-[80px] sm:min-w-[100px] sm:w-[100px] bg-white"></td>
                     </tr>
                     <tr>
-                      <td className="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-slate-700">ディナー</td>
-                      <td className="sticky left-[100px] z-10 bg-white"></td>
+                      <td className="sticky left-0 z-10 bg-white px-1 py-1 sm:px-4 sm:py-1 font-semibold text-slate-700 min-w-[80px] w-[80px] sm:min-w-[100px] sm:w-[100px]">ディナー</td>
                       {dates.map(date => {
                         let dinnerCount = 0;
                         staffData.forEach(staff => {
@@ -758,12 +727,10 @@ export default function AdminPage() {
                           }
                         });
                         return (
-                          <td key={date} className="px-4 py-3 text-center font-medium text-slate-600 bg-white">
-                            {dinnerCount}
-                          </td>
+                          <td key={date} className="px-1 py-1 sm:px-4 sm:py-1 text-center font-medium text-slate-600 bg-white text-[10px] sm:text-xs min-w-[36px] w-[36px] sm:min-w-[100px] sm:w-[100px]">{dinnerCount}</td>
                         );
                       })}
-                      <td className="bg-white"></td>
+                      <td className="min-w-[80px] w-[80px] sm:min-w-[100px] sm:w-[100px] bg-white"></td>
                     </tr>
                   </tfoot>
                 </table>
@@ -883,7 +850,7 @@ export default function AdminPage() {
         </div>
 
         {/* スタッフ管理セクション */}
-        <div className="bg-white rounded-xl shadow-md border border-sky-100 p-6 mt-6">
+        <div className="mt-6">
           <h2 className="text-xl font-semibold text-sky-800 mb-6">スタッフ管理</h2>
           {staffData.length > 0 ? (
             <div className="overflow-x-auto rounded-lg border border-green-100">
