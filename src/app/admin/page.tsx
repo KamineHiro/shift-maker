@@ -597,7 +597,7 @@ export default function AdminPage() {
           ) : staffData.length > 0 ? (
             <div className="relative">
               <div className="overflow-x-auto rounded-lg border border-green-100" style={{ position: 'relative' }}>
-                <table className="min-w-[400px] sm:min-w-full divide-y divide-green-200 table-fixed border-collapse">
+                <table className="min-w-full sm:min-w-full divide-y divide-green-200 table-fixed border-collapse">
                   <thead className="bg-green-50">
                     <tr>
                       <th className="sticky left-0 top-0 z-10 bg-green-50 px-1 py-1 sm:px-4 sm:py-1 text-left text-xs sm:text-sm font-medium text-green-700 uppercase tracking-wider min-w-[80px] w-[80px] sm:min-w-[100px] sm:w-[100px]">スタッフ名</th>
