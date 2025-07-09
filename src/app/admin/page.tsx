@@ -39,7 +39,7 @@ export default function AdminPage() {
   const [copyAccessKeySuccess, setCopyAccessKeySuccess] = useState<string | null>(null);
   const [copyAdminKeySuccess, setCopyAdminKeySuccess] = useState<string | null>(null);
   const [updatingConfirmStatus, setUpdatingConfirmStatus] = useState<string | null>(null);
-  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
+  const [, setHoveredRowId] = useState<string | null>(null);
   
   // グループ情報がない場合、または管理者でない場合はトップページにリダイレクト
   useEffect(() => {
