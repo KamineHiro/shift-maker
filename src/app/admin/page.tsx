@@ -619,15 +619,17 @@ export default function AdminPage() {
                         onMouseEnter={() => setHoveredRowId(staff.staff_id)}
                         onMouseLeave={() => setHoveredRowId(null)}
                       >
-                        <td 
-                          className={`sticky left-0 top-0 z-10 px-1 py-1 sm:px-4 sm:py-1 whitespace-nowrap min-w-[80px] w-[80px] sm:min-w-[100px] sm:w-[100px] transition-colors duration-150 flex items-center min-h-[40px] sm:min-h-[60px] overflow-hidden ${hoveredRowId === staff.staff_id ? 'bg-green-50' : 'bg-white'}`}
-                        >
-                          <span className="flex-1 min-w-0 max-w-[4em] truncate text-xs sm:text-sm font-medium text-green-800">{staff.name}</span>
-                          {staff.isConfirmed ? (
-                            <span className="ml-auto min-w-[16px] max-w-[20px] h-6 flex items-center justify-center px-1 text-center text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 flex-shrink-0">確</span>
-                          ) : (
-                            <span className="ml-auto min-w-[16px] max-w-[20px] h-6 flex items-center justify-center px-1 text-center text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-800 flex-shrink-0">未</span>
-                          )}
+                        <td className={`sticky left-0 z-10 px-1 py-1 sm:px-4 sm:py-1 whitespace-nowrap bg-white min-w-[80px] w-[80px] sm:min-w-[100px] sm:w-[100px]`}>
+                          <div className="flex items-center min-h-[40px] sm:min-h-[60px] overflow-hidden transition-colors duration-150">
+                            <span className="flex-1 min-w-0 max-w-[4em] truncate text-xs sm:text-sm font-medium text-green-800">
+                              {staff.name}
+                            </span>
+                            {staff.isConfirmed ? (
+                              <span className="ml-auto min-w-[16px] max-w-[20px] h-6 flex items-center justify-center px-1 text-center text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 flex-shrink-0">確</span>
+                            ) : (
+                              <span className="ml-auto min-w-[16px] max-w-[20px] h-6 flex items-center justify-center px-1 text-center text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-800 flex-shrink-0">未</span>
+                            )}
+                          </div>
                         </td>
                         {dates.map(date => {
                           const shift = staff.shifts[date];
