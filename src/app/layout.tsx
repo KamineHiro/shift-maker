@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { GroupProvider } from '@/contexts/GroupContext';
 import { AuthProvider } from '@/contexts/AuthContext';
+import MaintenancePage from '@/components/MaintenancePage';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,6 +29,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // メンテナンスモードのチェック
+  const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
+
   return (
     <html lang="ja">
       <head>
@@ -43,11 +47,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <GroupProvider>
-            {children}
-          </GroupProvider>
-        </AuthProvider>
+        {isMaintenanceMode ? (
+          <MaintenancePage />
+        ) : (
+          <AuthProvider>
+            <GroupProvider>
+              {children}
+            </GroupProvider>
+          </AuthProvider>
+        )}
       </body>
     </html>
   );
