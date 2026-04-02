@@ -235,7 +235,7 @@ export default function Home() {
                           required
                           value={accessKey}
                           onChange={(e) => setAccessKey(e.target.value)}
-                          className="appearance-none block w-full px-3 py-2 border border-sky-300 rounded-lg shadow-sm placeholder-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors duration-200"
+                          className="appearance-none block w-full px-3 py-2 border border-sky-400 rounded-lg shadow-sm text-sky-900 dark:text-sky-100 placeholder-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors duration-200"
                           placeholder="グループのアクセスキーを入力"
                         />
                       </div>
@@ -296,7 +296,7 @@ export default function Home() {
                           required
                           value={groupName}
                           onChange={(e) => setGroupName(e.target.value)}
-                          className="appearance-none block w-full px-3 py-2 border border-sky-300 rounded-lg shadow-sm placeholder-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors duration-200"
+                          className="appearance-none block w-full px-3 py-2 border border-sky-400 rounded-lg shadow-sm text-sky-900 dark:text-sky-100 placeholder-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors duration-200"
                           placeholder="新しいグループの名前"
                         />
                       </div>
@@ -314,7 +314,7 @@ export default function Home() {
                           required
                           value={adminPassword}
                           onChange={(e) => setAdminPassword(e.target.value)}
-                          className="appearance-none block w-full px-3 py-2 border border-sky-300 rounded-lg shadow-sm placeholder-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors duration-200"
+                          className="appearance-none block w-full px-3 py-2 border border-sky-400 rounded-lg shadow-sm text-sky-900 dark:text-sky-100 placeholder-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors duration-200"
                           placeholder="管理者用のパスワード"
                         />
                       </div>
@@ -356,7 +356,7 @@ export default function Home() {
                           required
                           value={adminKey}
                           onChange={(e) => setAdminKey(e.target.value)}
-                          className="appearance-none block w-full px-3 py-2 border border-sky-300 rounded-lg shadow-sm placeholder-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors duration-200"
+                          className="appearance-none block w-full px-3 py-2 border border-sky-400 rounded-lg shadow-sm text-sky-900 dark:text-sky-100 placeholder-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors duration-200"
                           placeholder="管理者キーを入力"
                         />
                       </div>
