@@ -18,6 +18,45 @@
 
 body {
   background: var(--background);
-  color: var(--foreground);
+  /* クラス指定が無いテキスト（td/p等）も継承で水色になるよう統一 */
+  color: #0369a1;
   font-family: var(--font-sans);
 }
+
+@layer utilities {
+  /* フォーム部品（select/textarea/input）の文字が薄く見える問題をまとめて解消 */
+  input,
+  textarea,
+  select {
+    color: #0369a1 !important; /* sky-700 */
+    caret-color: #0369a1 !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #0284c7 !important; /* sky-600 */
+    opacity: 1 !important;
+  }
+
+  /* select の option はクラス色を継承しないことがあるため個別に上書き */
+  select {
+    /* Chrome/Safari の select 内描画対策 */
+    -webkit-text-fill-color: #0369a1 !important;
+    font-weight: 600 !important;
+    background-color: #ffffff !important;
+  }
+
+  select option {
+    color: #0369a1 !important; /* sky-700 */
+    background-color: #ffffff !important;
+  }
+
+  /* より広範囲な上書き（formsやクラス組み合わせで取りこぼしが出るため） */
+  [class*="text-gray-"],
+  [class*="text-slate-"],
+  [class*="text-zinc-"],
+  [class*="text-neutral-"] {
+    color: #0369a1 !important;
+  }
+}
+
