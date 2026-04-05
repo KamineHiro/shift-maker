@@ -16,7 +16,7 @@ interface ApiError {
 
 export default function GroupPage() {
   const router = useRouter();
-  const { group, leaveGroup } = useGroup();
+  const { group, groupReady, leaveGroup } = useGroup();
   const shiftApi = useShiftApi();
   const staffApi = useStaffApi();
   
@@ -35,12 +35,13 @@ export default function GroupPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showStaffSelection, setShowStaffSelection] = useState(true);
   
-  // グループ情報がない場合はトップページにリダイレクト
+  // グループ情報がない場合はトップページにリダイレクト（localStorage 復元後のみ）
   useEffect(() => {
+    if (!groupReady) return;
     if (!group) {
       router.push('/');
     }
-  }, [group, router]);
+  }, [group, groupReady, router]);
   
   // 初期データの読み込み
   useEffect(() => {
@@ -54,7 +55,10 @@ export default function GroupPage() {
         
         // 日付範囲とスタッフ一覧を並列で取得
         const [dateRangeResponse, staffResponse] = await Promise.all([
-          shiftApi.getDateRange(group.groupId),
+          shiftApi.getDateRange(group.groupId, {
+            accessKey: group.accessKey,
+            adminKey: group.adminKey,
+          }),
           staffApi.getStaffList(group.groupId)
         ]);
 
@@ -341,7 +345,7 @@ export default function GroupPage() {
   
   // すべての日程を一括で更新する関数
   const handleBulkShiftUpdate = async (isWorking: boolean) => {
-    if (!staffId) return;
+    if (!staffId || !group) return;
     
     try {
       setLoading(true);
@@ -364,7 +368,10 @@ export default function GroupPage() {
       console.log('対象日付:', dates);
       
       // 現在表示されている日付範囲を使用して更新を実行
-      const response = await shiftApi.updateStaffShifts(staffId, isWorking, dates);
+      const response = await shiftApi.updateStaffShifts(staffId, isWorking, dates, {
+        accessKey: group.accessKey,
+        adminKey: group.adminKey,
+      });
       console.log('一括更新のレスポンス:', response);
       
       if (response.success) {
@@ -476,6 +483,17 @@ export default function GroupPage() {
     }
   };
   
+  if (!groupReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
   // リダイレクト中の表示
   if (!group) {
     return (

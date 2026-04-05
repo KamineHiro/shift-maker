@@ -2,6 +2,32 @@ import { supabase } from '@/lib/supabase';
 import { ShiftData, ShiftInfo } from '@/types';
 import { v4 as uuidv4, validate as isUUID } from 'uuid';
 
+/** groups テーブルは RLS のため、日付範囲取得にアクセスキーまたは管理者キーが必要 */
+export type GroupSecretKeys = { accessKey?: string; adminKey?: string };
+
+async function fetchShiftScheduleFromRpc(
+  keys: GroupSecretKeys
+): Promise<{ startDate: string; days: number } | null> {
+  const useAdmin = !!keys.adminKey;
+  const secret = keys.adminKey ?? keys.accessKey;
+  if (!secret) return null;
+
+  const { data, error } = await supabase.rpc('get_group_shift_schedule', {
+    p_secret: secret,
+    p_is_admin_key: useAdmin,
+  });
+
+  if (error) throw error;
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+
+  return {
+    startDate: row.shift_start_date || new Date().toISOString().split('T')[0],
+    days: row.shift_days ?? 14,
+  };
+}
+
 // スタッフ関連の操作
 export const staffService = {
   // スタッフ一覧を取得
@@ -274,40 +300,35 @@ export const shiftService = {
     }
   },
 
-  // 日付範囲を保存
-  async saveDateRange(groupId: string, startDate: string, days: number): Promise<void> {
+  // 日付範囲を保存（管理者キー必須・RPC）
+  async saveDateRange(adminKey: string, startDate: string, days: number): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('groups')
-        .update({
-          shift_start_date: startDate,
-          shift_days: days
-        })
-        .eq('id', groupId);
+      const { data, error } = await supabase.rpc('update_group_shift_schedule', {
+        p_admin_key: adminKey,
+        p_start_date: startDate,
+        p_shift_days: days,
+      });
 
       if (error) throw error;
+      if (data !== true) {
+        throw new Error('日付範囲の更新に失敗しました（管理者キーを確認してください）');
+      }
     } catch (error) {
       console.error('日付範囲の保存に失敗しました:', error);
       throw error;
     }
   },
 
-  // グループの日付範囲を取得
-  async getDateRange(groupId: string): Promise<{ startDate: string; days: number } | null> {
+  // グループの日付範囲を取得（共有キー経由の RPC）
+  async getDateRange(
+    _groupId: string,
+    keys?: GroupSecretKeys
+  ): Promise<{ startDate: string; days: number } | null> {
     try {
-      const { data, error } = await supabase
-        .from('groups')
-        .select('shift_start_date, shift_days')
-        .eq('id', groupId)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) return null;
-
-      return {
-        startDate: data.shift_start_date || new Date().toISOString().split('T')[0],
-        days: data.shift_days || 14
-      };
+      if (!keys || (!keys.accessKey && !keys.adminKey)) {
+        return null;
+      }
+      return await fetchShiftScheduleFromRpc(keys);
     } catch (error) {
       console.error('日付範囲の取得に失敗しました:', error);
       return null;
@@ -462,7 +483,12 @@ export const shiftService = {
   },
 
   // スタッフの全シフトを一括で更新
-  async updateStaffShifts(staffId: string, isWorking: boolean, specificDates?: string[]): Promise<boolean> {
+  async updateStaffShifts(
+    staffId: string,
+    isWorking: boolean,
+    specificDates?: string[],
+    groupKeys?: GroupSecretKeys
+  ): Promise<boolean> {
     try {
       console.log(`スタッフID: ${staffId}の全シフトを${isWorking ? '勤務可能' : '休み'}に設定します`);
       
@@ -496,19 +522,17 @@ export const shiftService = {
       // 指定がない場合はグループの日付範囲を取得
       else {
         try {
-          const dateRange = await this.getDateRange(groupId);
+          const dateRange = await this.getDateRange(groupId, groupKeys);
           if (dateRange) {
             const { startDate, days } = dateRange;
             dates = await this.getDates(new Date(startDate), days);
             console.log(`グループの日付範囲を使用: ${startDate}から${days}日間`);
           } else {
-            // グループに日付範囲が設定されていない場合はデフォルトを使用
             dates = await this.getDates();
             console.log('デフォルトの日付範囲を使用');
           }
         } catch (error) {
           console.error('日付範囲の取得に失敗しました:', error);
-          // エラーが発生した場合もデフォルトを使用
           dates = await this.getDates();
           console.log('エラーのためデフォルトの日付範囲を使用');
         }

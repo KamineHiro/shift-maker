@@ -175,13 +175,23 @@ export function useShiftApi() {
   }, [api]);
   
   // 日付範囲を保存
-  const saveDateRange = useCallback(async (groupId: string, startDate: string, days: number) => {
+  const saveDateRange = useCallback(async (
+    groupId: string,
+    startDate: string,
+    days: number,
+    opts?: { adminKey?: string }
+  ) => {
     try {
-      // データベースに保存
-      try {
-        await shiftService.saveDateRange(groupId, startDate, days);
-      } catch (dbError) {
-        console.warn('データベースへの日付範囲保存に失敗:', dbError);
+      if (opts?.adminKey) {
+        try {
+          await shiftService.saveDateRange(opts.adminKey, startDate, days);
+        } catch (dbError) {
+          console.warn('データベースへの日付範囲保存に失敗:', dbError);
+        }
+      } else {
+        console.warn(
+          '管理者キーがないため Supabase に日付範囲を保存できません（ローカルのみ保存します）。管理者キーで再入室すると DB にも保存できます。'
+        );
       }
       
       // ローカルストレージにも保存（バックアップ）
@@ -196,17 +206,18 @@ export function useShiftApi() {
   }, []);
   
   // 日付範囲を取得
-  const getDateRange = useCallback(async (groupId: string) => {
+  const getDateRange = useCallback(async (
+    groupId: string,
+    keys?: { accessKey?: string; adminKey?: string }
+  ) => {
     try {
-      // まずデータベースから日付範囲を取得
       try {
-        const response = await shiftService.getDateRange(groupId);
+        const response = await shiftService.getDateRange(groupId, keys);
         if (response) {
           return { success: true, data: response };
         }
       } catch (dbError) {
         console.warn('データベースからの日付範囲取得に失敗:', dbError);
-        // データベース取得失敗時はローカルストレージを試す
       }
       
       // データベースからの取得に失敗した場合、ローカルストレージから取得
@@ -243,9 +254,12 @@ export function useShiftApi() {
   }, []);
   
   // 現在のシフト期間を過去のシフトに移動し、削除する
-  const archiveCurrentShift = useCallback(async (groupId: string) => {
+  const archiveCurrentShift = useCallback(async (
+    groupId: string,
+    keys?: { accessKey?: string; adminKey?: string }
+  ) => {
     try {
-      const currentRangeResponse = await getDateRange(groupId);
+      const currentRangeResponse = await getDateRange(groupId, keys);
       if (!currentRangeResponse.success || !currentRangeResponse.data) {
         return { success: false, error: '現在のシフト期間が見つかりません' };
       }
@@ -361,11 +375,16 @@ export function useShiftApi() {
   }, []);
 
   // スタッフの全シフトを一括で更新
-  const updateStaffShifts = useCallback(async (staffId: string, isWorking: boolean, specificDates?: string[]) => {
+  const updateStaffShifts = useCallback(async (
+    staffId: string,
+    isWorking: boolean,
+    specificDates?: string[],
+    groupKeys?: { accessKey?: string; adminKey?: string }
+  ) => {
     try {
       console.log(`API Hookからの一括更新開始: staffId=${staffId}, isWorking=${isWorking}, 日付指定=${specificDates ? specificDates.length + '日分' : 'なし'}`);
       
-      const result = await shiftService.updateStaffShifts(staffId, isWorking, specificDates);
+      const result = await shiftService.updateStaffShifts(staffId, isWorking, specificDates, groupKeys);
       console.log(`一括更新結果: ${result ? '成功' : '失敗'}`);
       
       return { 

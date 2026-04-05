@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { GroupProvider } from '@/contexts/GroupContext';
-import { AuthProvider } from '@/contexts/AuthContext';
 import MaintenancePage from '@/components/MaintenancePage';
 
 const geistSans = Geist({
@@ -50,11 +49,9 @@ export default function RootLayout({
         {isMaintenanceMode ? (
           <MaintenancePage />
         ) : (
-          <AuthProvider>
-            <GroupProvider>
-              {children}
-            </GroupProvider>
-          </AuthProvider>
+          <GroupProvider>
+            {children}
+          </GroupProvider>
         )}
       </body>
     </html>

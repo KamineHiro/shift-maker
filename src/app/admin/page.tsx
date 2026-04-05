@@ -21,7 +21,7 @@ interface ApiError {
 
 export default function AdminPage() {
   const router = useRouter();
-  const { group, leaveGroup } = useGroup();
+  const { group, groupReady, leaveGroup } = useGroup();
   const staffApi = useStaffApi();
   const shiftApi = useShiftApi();
   
@@ -41,9 +41,9 @@ export default function AdminPage() {
   const [updatingConfirmStatus, setUpdatingConfirmStatus] = useState<string | null>(null);
   const [, setHoveredRowId] = useState<string | null>(null);
   
-  // グループ情報がない場合、または管理者でない場合はトップページにリダイレクト
+  // グループ情報がない場合、または管理者でない場合はリダイレクト（localStorage 復元後のみ）
   useEffect(() => {
-    if (group === undefined) return; // まだ取得中なら何もしない
+    if (!groupReady) return;
     if (!group) {
       router.replace('/');
       return;
@@ -52,7 +52,7 @@ export default function AdminPage() {
       router.replace('/group');
       return;
     }
-  }, [group]);
+  }, [group, groupReady, router]);
   
   // 初期データの読み込み
   useEffect(() => {
@@ -65,7 +65,10 @@ export default function AdminPage() {
         
         // 日付範囲とスタッフデータを並列で取得
         const [dateRangeResponse, staffResponse] = await Promise.all([
-          shiftApi.getDateRange(group.groupId),
+          shiftApi.getDateRange(group.groupId, {
+            accessKey: group.accessKey,
+            adminKey: group.adminKey,
+          }),
           staffApi.getStaffList(group.groupId)
         ]);
 
@@ -148,7 +151,9 @@ export default function AdminPage() {
     try {
       setLoading(true);
       
-      await shiftApi.saveDateRange(group.groupId, startDate, shiftDays);
+      await shiftApi.saveDateRange(group.groupId, startDate, shiftDays, {
+        adminKey: group.adminKey,
+      });
       
       const datesResponse = await shiftApi.getDates(new Date(startDate), shiftDays);
       if (datesResponse.success && datesResponse.data) {
@@ -437,6 +442,17 @@ export default function AdminPage() {
     }
   };
   
+  if (!groupReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-sky-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-sky-500 mx-auto"></div>
+          <p className="mt-4 text-sky-700">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!group || !group.isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-sky-50">

@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import { groupService } from '@/services/groupService';
 import { GroupAccess } from '@/types';
 
+/** アクセスは Supabase Auth ではなく、アクセスキー／管理者キーと localStorage の groupAccess で行う */
 interface GroupContextType {
   group: GroupAccess | null;
+  /** localStorage からの復元が終わるまで false（この間は保護ページでリダイレクトしない） */
+  groupReady: boolean;
   loading: boolean;
   error: string | null;
   accessGroup: (accessKey: string) => Promise<void>;
@@ -32,6 +35,7 @@ interface GroupProviderProps {
 
 export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
   const [group, setGroup] = useState<GroupAccess | null>(null);
+  const [groupReady, setGroupReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -47,6 +51,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
         localStorage.removeItem('groupAccess');
       }
     }
+    setGroupReady(true);
   }, []);
 
   // アクセスキーでグループにアクセス
@@ -105,7 +110,9 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       const groupAccess: GroupAccess = {
         groupId: newGroup.id,
         groupName: newGroup.name,
-        isAdmin: true
+        isAdmin: true,
+        accessKey: newGroup.accessKey,
+        adminKey: newGroup.adminKey,
       };
       
       setGroup(groupAccess);
@@ -138,6 +145,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
 
   const value = {
     group,
+    groupReady,
     loading,
     error,
     accessGroup,

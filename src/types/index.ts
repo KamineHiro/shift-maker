@@ -44,14 +44,3 @@ export interface GroupAccess {
   accessKey?: string;
   adminKey?: string;
 }
-
-// ユーザー関連の型定義
-export type UserRole = 'staff' | 'manager';
-
-export interface UserData {
-  id: string;
-  email: string;
-  name?: string;
-  role: UserRole;
-  staffId?: string;
-} 

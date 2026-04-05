@@ -4,110 +4,105 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateRandomString } from '@/utils/helpers';
 
 export const groupService = {
-  // 新しいグループを作成
   async createGroup(name: string, adminPassword: string): Promise<Group> {
     try {
       const id = uuidv4();
-      const accessKey = generateRandomString(8); // 8文字のランダムな文字列
-      const adminKey = generateRandomString(8); // 管理者用のキー
-      
-      const { data, error } = await supabase
-        .from('groups')
-        .insert([{
-          id,
-          name,
-          access_key: accessKey,
-          admin_key: adminKey,
-          admin_password: adminPassword, // 管理者パスワードを保存
-          owner_id: 1 // owner_idに1を設定（必須フィールド）
-        }])
-        .select()
-        .maybeSingle();
-      
+      const accessKey = generateRandomString(8);
+      const adminKey = generateRandomString(8);
+
+      const { data, error } = await supabase.rpc('create_group', {
+        p_id: id,
+        p_name: name,
+        p_access_key: accessKey,
+        p_admin_key: adminKey,
+        p_admin_password: adminPassword,
+      });
+
       if (error) {
         console.error('Supabaseエラー詳細:', error);
         throw error;
       }
-      if (!data) throw new Error('グループの作成に失敗しました');
-      
+
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error('グループの作成に失敗しました');
+
       return {
-        id: data.id,
-        name: data.name,
-        accessKey: data.access_key,
-        adminKey: data.admin_key,
-        createdAt: data.created_at
+        id: row.id,
+        name: row.name,
+        accessKey: row.access_key,
+        adminKey: row.admin_key,
+        createdAt: row.created_at,
       };
     } catch (error) {
       console.error('グループの作成に失敗しました:', error);
       throw error;
     }
   },
-  
-  // アクセスキーでグループを取得
+
   async getGroupByAccessKey(accessKey: string): Promise<GroupAccess> {
     try {
-      const { data, error } = await supabase
-        .from('groups')
-        .select('id, name, access_key')
-        .eq('access_key', accessKey)
-        .maybeSingle();
-      
+      const { data, error } = await supabase.rpc('get_group_by_access_key', {
+        p_access_key: accessKey,
+      });
+
       if (error) throw error;
-      if (!data) throw new Error('グループが見つかりませんでした');
-      
+
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error('グループが見つかりませんでした');
+
       return {
-        groupId: data.id,
-        groupName: data.name,
+        groupId: row.id,
+        groupName: row.name,
         isAdmin: false,
-        accessKey: data.access_key
+        accessKey: row.access_key,
       };
     } catch (error) {
       console.error('グループの取得に失敗しました:', error);
       throw error;
     }
   },
-  
-  // 管理者キーでグループを取得
+
   async getGroupByAdminKey(adminKey: string): Promise<GroupAccess> {
     try {
-      const { data, error } = await supabase
-        .from('groups')
-        .select('id, name, access_key, admin_key')
-        .eq('admin_key', adminKey)
-        .maybeSingle();
-      
+      const { data, error } = await supabase.rpc('get_group_by_admin_key', {
+        p_admin_key: adminKey,
+      });
+
       if (error) throw error;
-      if (!data) throw new Error('グループが見つかりませんでした');
-      
+
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error('グループが見つかりませんでした');
+
       return {
-        groupId: data.id,
-        groupName: data.name,
+        groupId: row.id,
+        groupName: row.name,
         isAdmin: true,
-        accessKey: data.access_key,
-        adminKey: data.admin_key
+        accessKey: row.access_key,
+        adminKey: row.admin_key,
       };
     } catch (error) {
       console.error('グループの取得に失敗しました:', error);
       throw error;
     }
   },
-  
-  // 管理者パスワードを検証
-  async verifyAdminPassword(groupId: string, password: string): Promise<boolean> {
+
+  /** 管理者キーとパスワードが一致するか（groups 直参照は RLS で不可のため RPC） */
+  async verifyAdminPassword(adminKey: string, password: string): Promise<boolean> {
     try {
-      const { data, error } = await supabase
-        .from('groups')
-        .select('admin_password')
-        .eq('id', groupId)
-        .single();
-      
-      if (error) throw error;
-      if (!data) return false;
-      
-      return data.admin_password === password;
+      const { data, error } = await supabase.rpc('verify_admin_password', {
+        p_admin_key: adminKey,
+        p_plain_password: password,
+      });
+
+      if (error) {
+        console.error('管理者パスワードの検証に失敗しました:', error);
+        return false;
+      }
+
+      return data === true;
     } catch (error) {
       console.error('管理者パスワードの検証に失敗しました:', error);
       return false;
     }
-  }
-}; 
+  },
+};
