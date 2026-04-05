@@ -1,100 +1,115 @@
 # シフトメーカー (Shift Maker)
 
-シフトメーカーは、スタッフのシフト希望を簡単に収集・管理できるウェブアプリケーションです。スタッフは希望のシフトを入力し、管理者はそれらを確認して最終的なシフト表を作成できます。
+シフトメーカーは、スタッフのシフト希望を簡単に収集・管理できるウェブアプリケーションです。スタッフは希望のシフトを入力し、管理者は日付範囲の設定やスタッフ追加、シフトの確認・一括操作などができます。
 
 ## デモサイト
 
-アプリケーションのデモは以下のURLでアクセスできます：
 [https://shift-maker-nu.vercel.app](https://shift-maker-nu.vercel.app)
 
 ### テストアクセス情報
 
-デモサイトを試すための情報:
-- テストグループへのアクセスキー: `testgroup`
+デモ環境にテスト用キーが用意されている場合の例（運用側のデータに依存します）:
+
+- スタッフ用アクセスキー: `testgroup`
 - 管理者キー: `testadmin`
+
+新規に試す場合は、トップ画面の「グループを作成」でグループを作り、表示されるアクセスキー／管理者キーを利用してください。
 
 ## 主な機能
 
-- **シフト希望の管理**: スタッフは日ごとの勤務可否や時間帯を入力できます
-- **グループ管理**: 複数のスタッフをグループとして管理できます
-- **シフト確認・承認**: 管理者はスタッフのシフト希望を確認し、最終的なシフトを設定できます
-- **レスポンシブデザイン**: スマートフォン、タブレット、PCなど様々なデバイスに対応
+- **シフト希望の入力**: スタッフ画面で日ごとの勤務可否・時間帯・メモを入力
+- **グループ単位の利用**: アクセスキー（スタッフ向け）と管理者キー（管理画面向け）でグループに入室
+- **管理者機能**: 日付範囲の設定、スタッフ追加、シフト一括操作、確定状態の切り替えなど
+- **入室状態の保持**: ブラウザの `localStorage` にグループ情報を保存（キーは端末に残るため共有端末に注意）
+- **メンテナンス表示**: 環境変数でメンテナンスページに切り替え可能
+- **レスポンシブデザイン**: スマートフォン・タブレット・PC に対応
 
 ## 技術スタック
 
-- **フロントエンド**:
-  - Next.js 15.2.2
-  - React 19
-  - TypeScript
-  - Tailwind CSS
-
-- **バックエンド**:
-  - Supabase (PostgreSQL)
-  - Next.js API Routes
-
-- **認証**:
-  - Supabase Authentication
+- **フロントエンド**: Next.js 15.2.x、React 19、TypeScript、Tailwind CSS
+- **データ**: Supabase（PostgreSQL）、`@supabase/supabase-js`
+- **API**: Next.js API Routes（一部エンドポイント）
+- **認証・入室**: **Supabase Authentication は使用していません。** アクセスキー／管理者キーと `GroupContext`（`localStorage` の `groupAccess`）でグループにアクセスします。
+- **データベース側**: `groups` テーブルは RLS で直接参照を制限し、キー検証・グループ作成などは **RPC（`SECURITY DEFINER`）** 経由（マイグレーション参照）
 
 ## ローカル開発環境のセットアップ
 
 ### 前提条件
 
-- Node.js 18.0.0以上
+- Node.js 18 以上
 - npm または yarn
+- （Supabase を自前で立てる場合）Supabase CLI など
 
 ### インストール手順
 
 1. リポジトリをクローン
+
 ```bash
-git clone https://github.com/yourusername/shift-maker.git
-cd shift-maker-project
+git clone https://github.com/KamineHiro/shift-maker.git
+cd shift-maker
 ```
 
 2. 依存パッケージをインストール
+
 ```bash
 npm install
-# または
-yarn install
 ```
 
 3. 環境変数の設定
-`.env.local`ファイルを作成し、以下の内容を設定:
-```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+プロジェクト直下に `.env.local` を作成:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```
 
-4. 開発サーバーを起動
+任意:
+
+```env
+# true のときメンテナンスページのみ表示
+NEXT_PUBLIC_MAINTENANCE_MODE=false
+```
+
+4. Supabase のスキーマを適用
+
+リモートの Supabase プロジェクトに、リポジトリ内のマイグレーションを順に適用してください。
+
+- CLI: `supabase link` 後に `supabase db push`
+- またはダッシュボードの **SQL Editor** に `supabase/migrations/` 内の SQL を**ファイル名の古い順**で実行
+
+本番・デモ環境でも、**アプリのデプロイと同じ Supabase にマイグレーションが当たっているか**を確認してください（未適用だとキー入室や日付範囲が動かないことがあります）。
+
+5. 開発サーバー起動
+
 ```bash
 npm run dev
-# または
-yarn dev
 ```
 
-5. ブラウザで http://localhost:3000 にアクセス
+6. ブラウザで http://localhost:3000 を開く
 
 ## プロジェクト構成
 
 ```
 /src
-  /app          # Next.jsのページコンポーネント
-  /components   # 再利用可能なコンポーネント
-  /contexts     # Reactコンテキスト
-  /hooks        # カスタムフック
-  /lib          # ユーティリティ関数
-  /services     # APIサービス
-  /types        # TypeScript型定義
+  /app              # App Router（ページ・API Routes）
+  /components       # UI コンポーネント
+  /contexts         # GroupContext など
+  /hooks            # useApi など
+  /lib              # Supabase クライアント等
+  /services         # groupService, supabaseService など
+  /types            # 型定義
+/supabase
+  /migrations       # PostgreSQL マイグレーション（RLS・RPC 含む）
 ```
 
 ## デプロイ
 
-このアプリケーションはVercelなどのNext.js対応のホスティングサービスに簡単にデプロイできます。
+Vercel など Next.js 対応ホスティングにデプロイ可能です。環境変数に **`NEXT_PUBLIC_SUPABASE_URL`** と **`NEXT_PUBLIC_SUPABASE_ANON_KEY`**（本番プロジェクトの値）を設定し、**Supabase 側へマイグレーションを適用**したうえで公開してください。
 
-現在のデプロイ先:
-- [https://shift-maker-nu.vercel.app](https://shift-maker-nu.vercel.app)
+現在のデプロイ例: [https://shift-maker-nu.vercel.app](https://shift-maker-nu.vercel.app)
 
 ```bash
-# Vercelへのデプロイ例
 vercel
 ```
 
