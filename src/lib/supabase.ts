@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database.types';
+import { logger } from '@/lib/logger';
 
 // 環境変数からSupabaseの接続情報を取得
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -16,7 +17,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   global: {
     fetch: (...args) => {
       return fetch(...args).catch(err => {
-        console.error('Supabaseリクエストエラー:', err);
+        logger.error('Supabaseリクエストエラー:', err);
         throw err;
       });
     },

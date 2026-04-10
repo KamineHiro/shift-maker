@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { validate as isUUID } from 'uuid';
 
 export async function POST(
@@ -8,7 +9,7 @@ export async function POST(
 ): Promise<NextResponse> {
   try {
     const { staffId } = await context.params; // ✅ `await` で `params` を取得
-    console.log("確定取り消しリクエスト受信 (REST):", staffId);
+    logger.log("確定取り消しリクエスト受信 (REST):", staffId);
 
     // UUIDのバリデーション
     if (!isUUID(staffId)) {
@@ -25,10 +26,10 @@ export async function POST(
       .eq('id', staffId)
       .maybeSingle();
 
-    console.log("🟢 スタッフデータ (REST):", staff);
+    logger.log("🟢 スタッフデータ (REST):", staff);
 
     if (checkError) {
-      console.error("❌ スタッフ確認エラー (REST):", checkError);
+      logger.error("❌ スタッフ確認エラー (REST):", checkError);
       return NextResponse.json(
         { success: false, error: 'スタッフの確認に失敗しました' },
         { status: 500 }
@@ -36,7 +37,7 @@ export async function POST(
     }
 
     if (!staff) {
-      console.log("❌ スタッフが存在しません (REST):", staffId);
+      logger.log("❌ スタッフが存在しません (REST):", staffId);
       // スタッフが見つからない場合でもエラーにせず成功と見なす
       return NextResponse.json({
         success: true,
@@ -53,7 +54,7 @@ export async function POST(
       .maybeSingle();
 
     if (error) {
-      console.error("❌ シフト確定取り消しエラー (REST):", error);
+      logger.error("❌ シフト確定取り消しエラー (REST):", error);
       return NextResponse.json(
         { success: false, error: 'シフト確定の取り消しに失敗しました' },
         { status: 500 }
@@ -65,7 +66,7 @@ export async function POST(
       data: { isConfirmed: data?.is_shift_confirmed ?? false } // ✅ `data` の null チェックを追加
     });
   } catch (error) {
-    console.error("❌ シフト確定取り消しエラー (REST):", error);
+    logger.error("❌ シフト確定取り消しエラー (REST):", error);
     return NextResponse.json(
       { success: false, error: 'シフト確定の取り消しに失敗しました' },
       { status: 500 }

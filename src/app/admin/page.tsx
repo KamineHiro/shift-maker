@@ -7,6 +7,7 @@ import { useStaffApi, useShiftApi } from '@/hooks/useApi';
 import { ShiftData, ShiftInfo } from '@/types';
 import { formatDisplayDate } from '@/utils/helpers';
 import ShiftModal from '@/components/ShiftModal';
+import { logger } from '@/lib/logger';
 
 // ShiftDataに確定状態を追加
 interface ExtendedShiftData extends ShiftData {
@@ -92,7 +93,7 @@ export default function AdminPage() {
         
         // スタッフデータの処理
         if (isSubscribed && staffResponse.success && staffResponse.data) {
-          console.log('スタッフデータ取得成功:', staffResponse.data);
+          logger.log('スタッフデータ取得成功:', staffResponse.data);
           
           // スタッフデータと確定状態を処理
           const staffArray = Array.isArray(staffResponse.data) ? staffResponse.data : [staffResponse.data];
@@ -102,11 +103,11 @@ export default function AdminPage() {
             staffArray.map(async (staff) => {
               const staffId = staff.staff_id || staff.id;
               if (!staffId) {
-                console.error('スタッフIDが見つかりません:', staff);
+                logger.error('スタッフIDが見つかりません:', staff);
                 return staff;
               }
               
-              console.log(`確定状態を取得中 - スタッフID: ${staffId}`);
+              logger.log(`確定状態を取得中 - スタッフID: ${staffId}`);
               const confirmResponse = await shiftApi.getShiftConfirmation(staffId);
               return {
                 ...staff,
@@ -119,15 +120,15 @@ export default function AdminPage() {
           );
           
           if (isSubscribed) {
-            console.log('処理済みスタッフデータ:', staffWithConfirmation);
+            logger.log('処理済みスタッフデータ:', staffWithConfirmation);
             setStaffData(staffWithConfirmation);
           }
         } else if (isSubscribed) {
-          console.warn('スタッフデータの取得に失敗:', staffResponse.error);
+          logger.warn('スタッフデータの取得に失敗:', staffResponse.error);
         }
       } catch (error: unknown) {
         if (isSubscribed) {
-          console.error('データ読み込みエラー:', error);
+          logger.error('データ読み込みエラー:', error);
           setError('データの読み込みに失敗しました');
         }
       } finally {
@@ -163,7 +164,7 @@ export default function AdminPage() {
       setShowDateSettings(false);
       setLoading(false);
     } catch (error) {
-      console.error('日付範囲の保存エラー:', error);
+      logger.error('日付範囲の保存エラー:', error);
       setError('日付範囲の保存に失敗しました');
       setLoading(false);
     }
@@ -203,7 +204,7 @@ export default function AdminPage() {
     
     try {
       setLoading(true);
-      console.log('管理者がシフト更新を開始:', { 
+      logger.log('管理者がシフト更新を開始:', { 
         staffId: selectedStaff.id, 
         staffName: selectedStaff.name,
         date: selectedDate, 
@@ -222,7 +223,7 @@ export default function AdminPage() {
       const response = await shiftApi.updateShift(selectedStaff.id, selectedDate, completeShiftInfo);
       
       if (response) {
-        console.log('管理者シフト更新成功:', response);
+        logger.log('管理者シフト更新成功:', response);
         // 成功したら、ローカルの状態も更新
         setStaffData(prevData => 
           prevData.map(staff => {
@@ -254,13 +255,13 @@ export default function AdminPage() {
         setModalOpen(false);
       } else {
         // エラーメッセージを表示
-        console.error('管理者シフト更新失敗');
+        logger.error('管理者シフト更新失敗');
         setError('シフトの更新に失敗しました');
       }
     } catch (error: unknown) {
       const apiError = error as ApiError;
       setError(apiError.message || 'シフトの更新中にエラーが発生しました');
-      console.error('管理者シフト更新エラー:', apiError);
+      logger.error('管理者シフト更新エラー:', apiError);
     } finally {
       setLoading(false);
     }
@@ -295,7 +296,7 @@ export default function AdminPage() {
       }
     } catch (err) {
       setError('スタッフの追加中にエラーが発生しました');
-      console.error('スタッフ追加エラー:', err);
+      logger.error('スタッフ追加エラー:', err);
     } finally {
       setLoading(false);
     }
@@ -318,7 +319,7 @@ export default function AdminPage() {
       }
     } catch (err) {
       setError('スタッフの削除中にエラーが発生しました');
-      console.error('スタッフ削除エラー:', err);
+      logger.error('スタッフ削除エラー:', err);
     } finally {
       setLoading(false);
     }
@@ -366,14 +367,14 @@ export default function AdminPage() {
       try {
         const response = await shiftApi.cleanupOldShifts();
         if (!response.success && isSubscribed) {
-          console.warn('古いシフトデータの自動削除:', response.error);
+          logger.warn('古いシフトデータの自動削除:', response.error);
         } else if (response.success && response.data) {
-          console.info('自動クリーンアップ:', response.data.message);
+          logger.info('自動クリーンアップ:', response.data.message);
         }
       } catch (error: unknown) {
         if (isSubscribed) {
           const apiError = error as ApiError;
-          console.error('古いシフトデータの自動削除中にエラーが発生しました:', apiError);
+          logger.error('古いシフトデータの自動削除中にエラーが発生しました:', apiError);
         }
       }
     };
@@ -382,13 +383,13 @@ export default function AdminPage() {
       // 初回実行（10分後に実行）- 即時実行すると起動時の負荷が高くなる可能性があるため遅延
       initialTimeout = setTimeout(() => {
         if (isSubscribed) {
-          console.log('古いシフトデータの初回クリーンアップを実行します');
+          logger.log('古いシフトデータの初回クリーンアップを実行します');
           cleanupOldData();
           
           // その後24時間ごとに実行
           interval = setInterval(() => {
             if (isSubscribed) {
-              console.log('古いシフトデータの定期クリーンアップを実行します');
+              logger.log('古いシフトデータの定期クリーンアップを実行します');
               cleanupOldData();
             }
           }, 24 * 60 * 60 * 1000); // 24時間ごと
@@ -436,7 +437,7 @@ export default function AdminPage() {
       }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'シフト確定状態の変更中にエラーが発生しました');
-      console.error('シフト確定状態変更エラー:', error);
+      logger.error('シフト確定状態変更エラー:', error);
     } finally {
       setUpdatingConfirmStatus(null);
     }

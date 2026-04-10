@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { ApiResponse, ShiftData, ShiftInfo } from '@/types';
 import { staffService, shiftService } from '@/services/supabaseService';
+import { logger } from '@/lib/logger';
 
 interface ApiState<T> {
   data: T | null;
@@ -35,7 +36,7 @@ export function useApi<T>() {
         data: result
       };
     } catch (error: unknown) {
-      console.error('API Error:', error);
+      logger.error('API Error:', error);
       setState(prev => ({
         ...prev,
         loading: false,
@@ -66,7 +67,7 @@ export function useStaffApi() {
 
   // 特定のスタッフを取得
   const getStaff = useCallback((id: string) => {
-    console.log('useStaffApi.getStaff呼び出し:', { id, type: typeof id });
+    logger.log('useStaffApi.getStaff呼び出し:', { id, type: typeof id });
     return api.callApi(() => staffService.getStaff(id));
   }, [api]);
 
@@ -115,7 +116,7 @@ export function useShiftApi() {
       
       return { success: true, data: dates };
     } catch (error: unknown) {
-      console.error('日付データの取得エラー:', error);
+      logger.error('日付データの取得エラー:', error);
       setError('日付データの取得に失敗しました');
       return { success: false, error: '日付データの取得に失敗しました' };
     }
@@ -129,7 +130,7 @@ export function useShiftApi() {
   // シフト情報を更新
   const updateShift = useCallback(async (staffId: string, date: string, shiftInfo: ShiftInfo): Promise<ShiftInfo | null> => {
     try {
-      console.log('API呼び出し - updateShift:', { staffId, date, shiftInfo });
+      logger.log('API呼び出し - updateShift:', { staffId, date, shiftInfo });
       
       if (!staffId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId)) {
         throw new Error(`無効なスタッフID: ${staffId}`);
@@ -143,17 +144,17 @@ export function useShiftApi() {
       
       try {
         const result = await shiftService.updateShift(completeShiftInfo);
-        console.log('シフト更新成功:', result);
+        logger.log('シフト更新成功:', result);
         return result;
       } catch (error: unknown) {
-        console.error('シフト更新サービスエラー:', error instanceof Error ? {
+        logger.error('シフト更新サービスエラー:', error instanceof Error ? {
           message: error.message,
           stack: error.stack
         } : error);
         throw error;
       }
     } catch (error: unknown) {
-      console.error('シフト更新エラー:', error instanceof Error ? {
+      logger.error('シフト更新エラー:', error instanceof Error ? {
         message: error.message,
         stack: error.stack
       } : error);
@@ -186,10 +187,10 @@ export function useShiftApi() {
         try {
           await shiftService.saveDateRange(opts.adminKey, startDate, days);
         } catch (dbError) {
-          console.warn('データベースへの日付範囲保存に失敗:', dbError);
+          logger.warn('データベースへの日付範囲保存に失敗:', dbError);
         }
       } else {
-        console.warn(
+        logger.warn(
           '管理者キーがないため Supabase に日付範囲を保存できません（ローカルのみ保存します）。管理者キーで再入室すると DB にも保存できます。'
         );
       }
@@ -199,7 +200,7 @@ export function useShiftApi() {
       
       return { success: true, data: true };
     } catch (error: unknown) {
-      console.error('日付範囲の保存エラー:', error);
+      logger.error('日付範囲の保存エラー:', error);
       setError('日付範囲の保存に失敗しました');
       return { success: false, error: '日付範囲の保存に失敗しました' };
     }
@@ -217,7 +218,7 @@ export function useShiftApi() {
           return { success: true, data: response };
         }
       } catch (dbError) {
-        console.warn('データベースからの日付範囲取得に失敗:', dbError);
+        logger.warn('データベースからの日付範囲取得に失敗:', dbError);
       }
       
       // データベースからの取得に失敗した場合、ローカルストレージから取得
@@ -229,7 +230,7 @@ export function useShiftApi() {
       
       return { success: false };
     } catch (error: unknown) {
-      console.error('日付範囲の取得エラー:', error);
+      logger.error('日付範囲の取得エラー:', error);
       setError('日付範囲の取得に失敗しました');
       return { success: false, error: '日付範囲の取得に失敗しました' };
     }
@@ -247,7 +248,7 @@ export function useShiftApi() {
       
       return { success: true, data: [] };
     } catch (error: unknown) {
-      console.error('過去のシフト期間の取得エラー:', error);
+      logger.error('過去のシフト期間の取得エラー:', error);
       setError('過去のシフト期間の取得に失敗しました');
       return { success: false, error: '過去のシフト期間の取得に失敗しました' };
     }
@@ -275,7 +276,7 @@ export function useShiftApi() {
       
       return { success: true, data: true };
     } catch (error: unknown) {
-      console.error('シフト期間のアーカイブエラー:', error);
+      logger.error('シフト期間のアーカイブエラー:', error);
       setError('シフト期間のアーカイブに失敗しました');
       return { success: false, error: 'シフト期間のアーカイブに失敗しました' };
     }
@@ -297,7 +298,7 @@ export function useShiftApi() {
       
       return { success: true, data: true };
     } catch (error: unknown) {
-      console.error('過去のシフト期間の削除エラー:', error);
+      logger.error('過去のシフト期間の削除エラー:', error);
       setError('過去のシフト期間の削除に失敗しました');
       return { success: false, error: '過去のシフト期間の削除に失敗しました' };
     }
@@ -309,7 +310,7 @@ export function useShiftApi() {
       const response = await api.callApi(() => shiftService.cleanupOldShifts());
       return response;
     } catch (error: unknown) {
-      console.error('古いシフトデータの削除エラー:', error);
+      logger.error('古いシフトデータの削除エラー:', error);
       setError('古いシフトデータの削除に失敗しました');
       return { success: false, error: '古いシフトデータの削除に失敗しました' };
     }
@@ -335,7 +336,7 @@ export function useShiftApi() {
       
       return response;
     } catch (error: unknown) {
-      console.error('シフト確定状態の取得に失敗しました:', error);
+      logger.error('シフト確定状態の取得に失敗しました:', error);
       return { success: false, error: '確定状態の取得に失敗しました' };
     }
   }, []);
@@ -352,7 +353,7 @@ export function useShiftApi() {
       
       return response;
     } catch (error: unknown) {
-      console.error('シフト確定に失敗しました:', error);
+      logger.error('シフト確定に失敗しました:', error);
       return { success: false, error: 'シフト確定に失敗しました' };
     }
   }, []);
@@ -369,7 +370,7 @@ export function useShiftApi() {
       
       return response;
     } catch (error: unknown) {
-      console.error('シフト確定解除に失敗しました:', error);
+      logger.error('シフト確定解除に失敗しました:', error);
       return { success: false, error: 'シフト確定解除に失敗しました' };
     }
   }, []);
@@ -382,10 +383,10 @@ export function useShiftApi() {
     groupKeys?: { accessKey?: string; adminKey?: string }
   ) => {
     try {
-      console.log(`API Hookからの一括更新開始: staffId=${staffId}, isWorking=${isWorking}, 日付指定=${specificDates ? specificDates.length + '日分' : 'なし'}`);
+      logger.log(`API Hookからの一括更新開始: staffId=${staffId}, isWorking=${isWorking}, 日付指定=${specificDates ? specificDates.length + '日分' : 'なし'}`);
       
       const result = await shiftService.updateStaffShifts(staffId, isWorking, specificDates, groupKeys);
-      console.log(`一括更新結果: ${result ? '成功' : '失敗'}`);
+      logger.log(`一括更新結果: ${result ? '成功' : '失敗'}`);
       
       return { 
         success: result, 
@@ -394,8 +395,8 @@ export function useShiftApi() {
       };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : '不明なエラー';
-      console.error('スタッフの全シフト一括更新エラー:', error);
-      console.error('エラー詳細:', errorMessage);
+      logger.error('スタッフの全シフト一括更新エラー:', error);
+      logger.error('エラー詳細:', errorMessage);
       setError('スタッフの全シフト一括更新に失敗しました');
       return { 
         success: false, 

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { groupService } from '@/services/groupService';
+import { logger } from '@/lib/logger';
 import { GroupAccess } from '@/types';
 
 /** アクセスは Supabase Auth ではなく、アクセスキー／管理者キーと localStorage の groupAccess で行う */
@@ -47,7 +48,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       try {
         setGroup(JSON.parse(storedGroup));
       } catch (err) {
-        console.error('グループ情報の復元に失敗しました:', err);
+        logger.error('グループ情報の復元に失敗しました:', err);
         localStorage.removeItem('groupAccess');
       }
     }
@@ -68,7 +69,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       
       router.push('/group');
     } catch (err) {
-      console.error('グループへのアクセスに失敗しました:', err);
+      logger.error('グループへのアクセスに失敗しました:', err);
       setError('無効なアクセスキーです');
       throw err;
     } finally {
@@ -90,7 +91,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       
       router.push('/admin');
     } catch (err) {
-      console.error('管理者グループへのアクセスに失敗しました:', err);
+      logger.error('管理者グループへのアクセスに失敗しました:', err);
       setError('無効な管理者キーです');
       throw err;
     } finally {
@@ -123,7 +124,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       // 管理者キーを返す
       return newGroup.adminKey;
     } catch (err) {
-      console.error('グループの作成に失敗しました:', err);
+      logger.error('グループの作成に失敗しました:', err);
       setError('グループの作成に失敗しました');
       throw err;
     } finally {

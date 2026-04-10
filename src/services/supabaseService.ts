@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { ShiftData, ShiftInfo } from '@/types';
 import { v4 as uuidv4, validate as isUUID } from 'uuid';
 
@@ -33,7 +34,7 @@ export const staffService = {
   // スタッフ一覧を取得
   async getStaffList(groupId?: string): Promise<ShiftData[]> {
     try {
-      console.log(`スタッフ一覧取得 - グループID: ${groupId || '未指定'}`);
+      logger.log(`スタッフ一覧取得 - グループID: ${groupId || '未指定'}`);
       
       // スタッフデータを取得
       let query = supabase
@@ -43,25 +44,25 @@ export const staffService = {
       
       // グループIDが指定されている場合はフィルタリング
       if (groupId) {
-        console.log(`グループID: ${groupId} でスタッフをフィルタリングします`);
+        logger.log(`グループID: ${groupId} でスタッフをフィルタリングします`);
         query = query.eq('group_id', groupId);
       } else {
-        console.warn('グループIDが指定されていません。すべてのスタッフが返されます');
+        logger.warn('グループIDが指定されていません。すべてのスタッフが返されます');
       }
       
       const { data: staffData, error: staffError } = await query;
 
       if (staffError) {
-        console.error('スタッフデータ取得エラー:', staffError);
+        logger.error('スタッフデータ取得エラー:', staffError);
         throw staffError;
       }
       
       if (!staffData) {
-        console.log('スタッフデータが見つかりません');
+        logger.log('スタッフデータが見つかりません');
         return [];
       }
       
-      console.log(`取得したスタッフ数: ${staffData.length}人`);
+      logger.log(`取得したスタッフ数: ${staffData.length}人`);
 
       // 各スタッフのシフト情報を取得
       const staffWithShifts: ShiftData[] = await Promise.all(
@@ -96,7 +97,7 @@ export const staffService = {
 
       return staffWithShifts;
     } catch (error) {
-      console.error('スタッフ一覧の取得に失敗しました:', error);
+      logger.error('スタッフ一覧の取得に失敗しました:', error);
       throw error;
     }
   },
@@ -104,7 +105,7 @@ export const staffService = {
   // 特定のスタッフを取得
   async getStaff(id: string): Promise<ShiftData | null> {
     try {
-      console.log(`getStaff呼び出し - ID: ${id}, 型: ${typeof id}, UUID有効: ${isUUID(id)}`);
+      logger.log(`getStaff呼び出し - ID: ${id}, 型: ${typeof id}, UUID有効: ${isUUID(id)}`);
       
       // スタッフデータを取得
       const { data: staff, error: staffError } = await supabase
@@ -113,11 +114,11 @@ export const staffService = {
         .eq('id', id)
         .maybeSingle();
 
-      console.log(`スタッフデータ取得結果:`, staff ? '成功' : '該当なし', staffError ? `エラー: ${staffError.message}` : 'エラーなし');
+      logger.log(`スタッフデータ取得結果:`, staff ? '成功' : '該当なし', staffError ? `エラー: ${staffError.message}` : 'エラーなし');
 
       if (staffError) throw staffError;
       if (!staff) {
-        console.log(`スタッフが見つかりません (ID: ${id})`);
+        logger.log(`スタッフが見つかりません (ID: ${id})`);
         return null;
       }
 
@@ -148,7 +149,7 @@ export const staffService = {
         shifts
       };
     } catch (error) {
-      console.error('スタッフの取得に失敗しました:', error);
+      logger.error('スタッフの取得に失敗しました:', error);
       throw error;
     }
   },
@@ -156,7 +157,7 @@ export const staffService = {
   // スタッフを追加
   async addStaff(name: string, groupId?: string): Promise<ShiftData> {
     try {
-      console.log('スタッフ追加開始:', { name, groupId });
+      logger.log('スタッフ追加開始:', { name, groupId });
       
       // IDを生成
       const id = uuidv4();
@@ -175,16 +176,16 @@ export const staffService = {
         .maybeSingle();
 
       if (error) {
-        console.error('スタッフ追加中のSupabaseエラー:', error);
+        logger.error('スタッフ追加中のSupabaseエラー:', error);
         throw error;
       }
       
       if (!data) {
-        console.error('スタッフの追加に失敗: データが返されませんでした');
+        logger.error('スタッフの追加に失敗: データが返されませんでした');
         throw new Error('スタッフの追加に失敗しました');
       }
 
-      console.log('スタッフ追加成功:', data);
+      logger.log('スタッフ追加成功:', data);
       
       return {
         staff_id: data.id,
@@ -192,7 +193,7 @@ export const staffService = {
         shifts: {}
       };
     } catch (error) {
-      console.error('スタッフの追加に失敗しました:', error);
+      logger.error('スタッフの追加に失敗しました:', error);
       throw error;
     }
   },
@@ -237,7 +238,7 @@ export const staffService = {
         shifts
       };
     } catch (error) {
-      console.error('スタッフの更新に失敗しました:', error);
+      logger.error('スタッフの更新に失敗しました:', error);
       throw error;
     }
   },
@@ -261,7 +262,7 @@ export const staffService = {
 
       if (error) throw error;
     } catch (error) {
-      console.error('スタッフの削除に失敗しました:', error);
+      logger.error('スタッフの削除に失敗しました:', error);
       throw error;
     }
   }
@@ -272,7 +273,7 @@ export const shiftService = {
   // 日付一覧を取得（デフォルトは現在の日付から14日間）
   async getDates(startDate?: Date, days: number = 14): Promise<string[]> {
     try {
-      console.log(`getDates呼び出し: startDate=${startDate?.toISOString() || '未指定'}, days=${days}`);
+      logger.log(`getDates呼び出し: startDate=${startDate?.toISOString() || '未指定'}, days=${days}`);
       const dates: string[] = [];
       const start = startDate ? new Date(startDate) : new Date();
       
@@ -292,10 +293,10 @@ export const shiftService = {
         dates.push(formattedDate);
       }
       
-      console.log(`生成された日付一覧: ${JSON.stringify(dates)}`);
+      logger.log(`生成された日付一覧: ${JSON.stringify(dates)}`);
       return dates;
     } catch (error) {
-      console.error('日付一覧の取得に失敗しました:', error);
+      logger.error('日付一覧の取得に失敗しました:', error);
       throw error;
     }
   },
@@ -314,7 +315,7 @@ export const shiftService = {
         throw new Error('日付範囲の更新に失敗しました（管理者キーを確認してください）');
       }
     } catch (error) {
-      console.error('日付範囲の保存に失敗しました:', error);
+      logger.error('日付範囲の保存に失敗しました:', error);
       throw error;
     }
   },
@@ -330,7 +331,7 @@ export const shiftService = {
       }
       return await fetchShiftScheduleFromRpc(keys);
     } catch (error) {
-      console.error('日付範囲の取得に失敗しました:', error);
+      logger.error('日付範囲の取得に失敗しました:', error);
       return null;
     }
   },
@@ -357,7 +358,7 @@ export const shiftService = {
         note: cleanNote
       } as ShiftInfo;
     } catch (error) {
-      console.error('シフト情報の取得に失敗しました:', error);
+      logger.error('シフト情報の取得に失敗しました:', error);
       throw error;
     }
   },
@@ -376,7 +377,7 @@ export const shiftService = {
         .maybeSingle();
 
       if (checkError) {
-        console.error('シフト確認エラー:', checkError);
+        logger.error('シフト確認エラー:', checkError);
         throw checkError;
       }
 
@@ -413,13 +414,13 @@ export const shiftService = {
       }
 
       if (error) {
-        console.error('シフト更新エラー:', error);
+        logger.error('シフト更新エラー:', error);
         throw error;
       }
 
       return shiftInfo;
     } catch (error) {
-      console.error('シフト更新エラー:', error);
+      logger.error('シフト更新エラー:', error);
       throw error;
     }
   },
@@ -435,7 +436,7 @@ export const shiftService = {
 
       if (error) throw error;
     } catch (error) {
-      console.error('シフト情報の削除に失敗しました:', error);
+      logger.error('シフト情報の削除に失敗しました:', error);
       throw error;
     }
   },
@@ -443,7 +444,7 @@ export const shiftService = {
   // 特定のスタッフの全シフトを取得
   async getStaffShifts(staffId: string): Promise<Record<string, ShiftInfo>> {
     try {
-      console.log(`スタッフID: ${staffId}のシフトデータを取得します`);
+      logger.log(`スタッフID: ${staffId}のシフトデータを取得します`);
       
       const { data, error } = await supabase
         .from('shifts')
@@ -451,14 +452,14 @@ export const shiftService = {
         .eq('staff_id', staffId);
 
       if (error) {
-        console.error('シフトデータ取得エラー:', error);
+        logger.error('シフトデータ取得エラー:', error);
         throw error;
       }
 
       // シフトデータをフォーマット
       const shiftsRecord: Record<string, ShiftInfo> = {};
       if (data) {
-        console.log(`取得したシフト数: ${data.length}`);
+        logger.log(`取得したシフト数: ${data.length}`);
         data.forEach((shift) => {
           const cleanNote = shift.note ? shift.note.trim() : '';
           
@@ -472,12 +473,12 @@ export const shiftService = {
           } as ShiftInfo;
         });
       } else {
-        console.log('シフトデータはありません');
+        logger.log('シフトデータはありません');
       }
 
       return shiftsRecord;
     } catch (error) {
-      console.error('スタッフのシフト一覧の取得に失敗しました:', error);
+      logger.error('スタッフのシフト一覧の取得に失敗しました:', error);
       throw error;
     }
   },
@@ -490,7 +491,7 @@ export const shiftService = {
     groupKeys?: GroupSecretKeys
   ): Promise<boolean> {
     try {
-      console.log(`スタッフID: ${staffId}の全シフトを${isWorking ? '勤務可能' : '休み'}に設定します`);
+      logger.log(`スタッフID: ${staffId}の全シフトを${isWorking ? '勤務可能' : '休み'}に設定します`);
       
       // staffIdを持つスタッフがどのグループに所属しているか確認
       const { data: staffData, error: staffError } = await supabase
@@ -500,24 +501,24 @@ export const shiftService = {
         .maybeSingle();
         
       if (staffError) {
-        console.error('スタッフデータの取得に失敗しました:', staffError);
+        logger.error('スタッフデータの取得に失敗しました:', staffError);
         throw staffError;
       }
       
       if (!staffData || !staffData.group_id) {
-        console.error('スタッフがグループに所属していないか、データの取得に失敗しました');
+        logger.error('スタッフがグループに所属していないか、データの取得に失敗しました');
         throw new Error('スタッフデータの取得に失敗しました');
       }
       
       const groupId = staffData.group_id;
-      console.log(`スタッフのグループID: ${groupId}`);
+      logger.log(`スタッフのグループID: ${groupId}`);
       
       let dates: string[] = [];
       
       // 特定の日付が指定されている場合はそれを使用
       if (specificDates && specificDates.length > 0) {
         dates = specificDates;
-        console.log('指定された日付で更新を実行:', dates);
+        logger.log('指定された日付で更新を実行:', dates);
       } 
       // 指定がない場合はグループの日付範囲を取得
       else {
@@ -526,19 +527,19 @@ export const shiftService = {
           if (dateRange) {
             const { startDate, days } = dateRange;
             dates = await this.getDates(new Date(startDate), days);
-            console.log(`グループの日付範囲を使用: ${startDate}から${days}日間`);
+            logger.log(`グループの日付範囲を使用: ${startDate}から${days}日間`);
           } else {
             dates = await this.getDates();
-            console.log('デフォルトの日付範囲を使用');
+            logger.log('デフォルトの日付範囲を使用');
           }
         } catch (error) {
-          console.error('日付範囲の取得に失敗しました:', error);
+          logger.error('日付範囲の取得に失敗しました:', error);
           dates = await this.getDates();
-          console.log('エラーのためデフォルトの日付範囲を使用');
+          logger.log('エラーのためデフォルトの日付範囲を使用');
         }
       }
       
-      console.log(`更新対象の日付数: ${dates.length}日間, 対象日: ${JSON.stringify(dates)}`);
+      logger.log(`更新対象の日付数: ${dates.length}日間, 対象日: ${JSON.stringify(dates)}`);
       
       // 一度に処理する最大数を増やす
       const BATCH_SIZE = 14; // 全ての日程（通常14日）を一度に処理
@@ -547,7 +548,7 @@ export const shiftService = {
       // バッチ処理でシフトを更新
       for (let i = 0; i < dates.length; i += BATCH_SIZE) {
         const batch = dates.slice(i, i + BATCH_SIZE);
-        console.log(`バッチ処理: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目, 日付: ${JSON.stringify(batch)}`);
+        logger.log(`バッチ処理: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目, 日付: ${JSON.stringify(batch)}`);
         
         // 現在のバッチの処理を並列実行
         const batchPromises = batch.map(async (date) => {
@@ -561,7 +562,7 @@ export const shiftService = {
               .maybeSingle();
               
             if (checkError) {
-              console.error(`日付: ${date}のシフト確認エラー:`, checkError);
+              logger.error(`日付: ${date}のシフト確認エラー:`, checkError);
               return false;
             }
             
@@ -571,7 +572,7 @@ export const shiftService = {
             
             // 既存のシフトがある場合
             if (existingShift) {
-              console.log(`既存シフト更新: ${date}, is_off=${!isWorking}`);
+              logger.log(`既存シフト更新: ${date}, is_off=${!isWorking}`);
               
               // メモ情報は引き継ぐ
               note = existingShift.note || note;
@@ -593,13 +594,13 @@ export const shiftService = {
                 .select();
                 
               if (updateError) {
-                console.error(`日付: ${date}のシフト更新エラー:`, updateError);
+                logger.error(`日付: ${date}のシフト更新エラー:`, updateError);
                 return false;
               }
               
-              console.log(`シフト更新完了: ${date}, 結果:`, updateData ? '成功' : '不明');
+              logger.log(`シフト更新完了: ${date}, 結果:`, updateData ? '成功' : '不明');
             } else {
-              console.log(`新規シフト作成: ${date}, is_off=${!isWorking}`);
+              logger.log(`新規シフト作成: ${date}, is_off=${!isWorking}`);
               // 新規作成
               const { data: insertData, error: insertError } = await supabase
                 .from('shifts')
@@ -615,16 +616,16 @@ export const shiftService = {
                 .select();
                 
               if (insertError) {
-                console.error(`日付: ${date}のシフト作成エラー:`, insertError);
+                logger.error(`日付: ${date}のシフト作成エラー:`, insertError);
                 return false;
               }
               
-              console.log(`シフト作成完了: ${date}, 結果:`, insertData ? '成功' : '不明');
+              logger.log(`シフト作成完了: ${date}, 結果:`, insertData ? '成功' : '不明');
             }
             
             return true;
           } catch (error) {
-            console.error(`日付: ${date}の処理でエラー:`, error);
+            logger.error(`日付: ${date}の処理でエラー:`, error);
             return false;
           }
         });
@@ -633,22 +634,22 @@ export const shiftService = {
         const batchResults = await Promise.all(batchPromises);
         const batchSuccess = batchResults.every(result => result === true);
         if (!batchSuccess) {
-          console.warn(`バッチ処理でエラーが発生しました: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目`);
+          logger.warn(`バッチ処理でエラーが発生しました: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目`);
           const failedIndices = batchResults.map((result, index) => !result ? index : -1).filter(index => index !== -1);
-          console.warn(`失敗した日程のインデックス: ${failedIndices.join(', ')}`);
+          logger.warn(`失敗した日程のインデックス: ${failedIndices.join(', ')}`);
           success = false;
         } else {
-          console.log(`バッチ処理成功: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目`);
+          logger.log(`バッチ処理成功: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目`);
         }
         
         // 次のバッチ処理の前に少し待機（レート制限対策）
         await new Promise(resolve => setTimeout(resolve, 300));
       }
       
-      console.log(`全シフト更新処理完了. 結果: ${success ? '成功' : '一部失敗'}`);
+      logger.log(`全シフト更新処理完了. 結果: ${success ? '成功' : '一部失敗'}`);
       return success;
     } catch (error) {
-      console.error('スタッフの全シフト一括更新に失敗しました:', error);
+      logger.error('スタッフの全シフト一括更新に失敗しました:', error);
       throw error;
     }
   },
@@ -684,7 +685,7 @@ export const shiftService = {
         message: `${oldShifts.length}件の古いシフトデータを削除しました` 
       };
     } catch (error) {
-      console.error('Error cleaning up old shifts:', error);
+      logger.error('Error cleaning up old shifts:', error);
       return { 
         success: false, 
         error: '古いシフトデータの削除に失敗しました',
@@ -709,7 +710,7 @@ export const shiftService = {
         data: { isConfirmed: data?.is_shift_confirmed ?? false }
       };
     } catch (error) {
-      console.error('シフト確定状態の取得に失敗しました:', error);
+      logger.error('シフト確定状態の取得に失敗しました:', error);
       return { success: false, error: '確定状態の取得に失敗しました' };
     }
   },
@@ -731,7 +732,7 @@ export const shiftService = {
         data: { isConfirmed: data?.is_shift_confirmed ?? true }
       };
     } catch (error) {
-      console.error('シフト確定に失敗しました:', error);
+      logger.error('シフト確定に失敗しました:', error);
       return { success: false, error: 'シフト確定に失敗しました' };
     }
   },
@@ -753,7 +754,7 @@ export const shiftService = {
         data: { isConfirmed: data?.is_shift_confirmed ?? false }
       };
     } catch (error) {
-      console.error('シフト確定解除に失敗しました:', error);
+      logger.error('シフト確定解除に失敗しました:', error);
       return { success: false, error: 'シフト確定解除に失敗しました' };
     }
   },

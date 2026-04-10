@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { validate as isUUID } from 'uuid';
 
 export async function GET(
@@ -35,7 +36,7 @@ export async function GET(
       .maybeSingle();
 
     if (error) {
-      console.error("❌ Supabase GET エラー:", error);
+      logger.error("❌ Supabase GET エラー:", error);
       return NextResponse.json(
         { success: false, error: 'シフト情報の取得に失敗しました', details: error.message },
         { status: 500 }
@@ -51,7 +52,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error("❌ GET エラー:", error);
+    logger.error("❌ GET エラー:", error);
     return NextResponse.json(
       { success: false, error: 'シフト情報の取得に失敗しました', details: String(error) },
       { status: 500 }

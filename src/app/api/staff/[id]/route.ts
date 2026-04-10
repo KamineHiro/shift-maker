@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, ShiftData } from '@/types';
 import { staffService } from '@/services/supabaseService';
+import { logger } from '@/lib/logger';
 
 interface RouteParams {
   params: Promise<{ id: string }>; // ✅ `params` を `Promise` で取得
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest, context: RouteParams) {
     
     return NextResponse.json(response);
   } catch (error) {
-    console.error('スタッフデータの取得エラー:', error);
+    logger.error('スタッフデータの取得エラー:', error);
     const response: ApiResponse<null> = {
       success: false,
       error: error instanceof Error ? error.message : 'スタッフデータの取得に失敗しました'
@@ -53,7 +54,7 @@ export async function PUT(request: NextRequest, context: RouteParams) {
     
     return NextResponse.json({ success: true, data: updatedStaff });
   } catch (error) {
-    console.error('スタッフ情報の更新エラー:', error);
+    logger.error('スタッフ情報の更新エラー:', error);
     return NextResponse.json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'スタッフ情報の更新に失敗しました' 
@@ -76,7 +77,7 @@ export async function DELETE(request: NextRequest, context: RouteParams) {
     
     return NextResponse.json({ success: true, data: staff });
   } catch (error) {
-    console.error('スタッフの削除エラー:', error);
+    logger.error('スタッフの削除エラー:', error);
     return NextResponse.json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'スタッフの削除に失敗しました' 

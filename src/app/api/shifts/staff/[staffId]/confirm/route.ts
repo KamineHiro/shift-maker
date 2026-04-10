@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { validate as isUUID } from 'uuid';
 
 export async function POST(
@@ -24,7 +25,7 @@ export async function POST(
       .eq('staff_id', staffId);
 
     if (error) {
-      console.error("❌ Supabase 更新エラー:", error);
+      logger.error("❌ Supabase 更新エラー:", error);
       return NextResponse.json(
         { success: false, error: 'シフト確定に失敗しました', details: error.message },
         { status: 500 }
@@ -33,7 +34,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, message: 'シフトが確定しました' });
   } catch (error) {
-    console.error("❌ POST エラー:", error);
+    logger.error("❌ POST エラー:", error);
     return NextResponse.json(
       { success: false, error: 'シフト確定中にエラーが発生しました', details: String(error) },
       { status: 500 }

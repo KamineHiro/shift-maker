@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShiftInfo } from '@/types';
+import { logger } from '@/lib/logger';
 
 interface ShiftModalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
   // currentShiftが変更された場合にフォームを更新
   useEffect(() => {
     if (currentShift) {
-      console.log('モーダルに現在のシフト情報を設定:', currentShift);
+      logger.log('モーダルに現在のシフト情報を設定:', currentShift);
       setStartTime(currentShift.startTime || '10:00');
       setEndTime(currentShift.endTime || '17:00');
       setIsWorking(currentShift.isWorking ?? true);
@@ -64,7 +65,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
       }
     } else {
       // リセット
-      console.log('モーダルのシフト情報をリセット');
+      logger.log('モーダルのシフト情報をリセット');
       setStartTime('10:00');
       setEndTime('17:00');
       setIsWorking(true);
@@ -120,7 +121,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({
       date: ''
     };
     
-    console.log('シフト保存を試行:', newShiftInfo);
+    logger.log('シフト保存を試行:', newShiftInfo);
     onSave(newShiftInfo);
     handleClose();
   };

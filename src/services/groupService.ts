@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { Group, GroupAccess } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateRandomString } from '@/utils/helpers';
@@ -19,7 +20,7 @@ export const groupService = {
       });
 
       if (error) {
-        console.error('Supabaseエラー詳細:', error);
+        logger.error('Supabaseエラー詳細:', error);
         throw error;
       }
 
@@ -34,7 +35,7 @@ export const groupService = {
         createdAt: row.created_at,
       };
     } catch (error) {
-      console.error('グループの作成に失敗しました:', error);
+      logger.error('グループの作成に失敗しました:', error);
       throw error;
     }
   },
@@ -57,7 +58,7 @@ export const groupService = {
         accessKey: row.access_key,
       };
     } catch (error) {
-      console.error('グループの取得に失敗しました:', error);
+      logger.error('グループの取得に失敗しました:', error);
       throw error;
     }
   },
@@ -81,7 +82,7 @@ export const groupService = {
         adminKey: row.admin_key,
       };
     } catch (error) {
-      console.error('グループの取得に失敗しました:', error);
+      logger.error('グループの取得に失敗しました:', error);
       throw error;
     }
   },
@@ -95,13 +96,13 @@ export const groupService = {
       });
 
       if (error) {
-        console.error('管理者パスワードの検証に失敗しました:', error);
+        logger.error('管理者パスワードの検証に失敗しました:', error);
         return false;
       }
 
       return data === true;
     } catch (error) {
-      console.error('管理者パスワードの検証に失敗しました:', error);
+      logger.error('管理者パスワードの検証に失敗しました:', error);
       return false;
     }
   },

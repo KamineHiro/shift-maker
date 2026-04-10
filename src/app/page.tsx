@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGroup } from '@/contexts/GroupContext';
+import { logger } from '@/lib/logger';
 
 export default function Home() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function Home() {
       
       await accessGroup(accessKey.trim());
     } catch (err) {
-      console.error('グループへのアクセスに失敗しました:', err);
+      logger.error('グループへのアクセスに失敗しました:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -85,7 +86,7 @@ export default function Home() {
       
       await accessAdminGroup(adminKey.trim());
     } catch (err) {
-      console.error('管理者アクセスに失敗しました:', err);
+      logger.error('管理者アクセスに失敗しました:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -98,20 +99,20 @@ export default function Home() {
     
     try {
       setIsSubmitting(true);
-      console.log('グループ作成開始:', { name: groupName.trim() });
+      logger.log('グループ作成開始:', { name: groupName.trim() });
       
       const adminKey = await createGroup(groupName.trim(), adminPassword.trim());
-      console.log('グループ作成成功:', { adminKey });
+      logger.log('グループ作成成功:', { adminKey });
       
       setCreatedAdminKey(adminKey);
     } catch (err) {
-      console.error('グループの作成に失敗しました:', err);
+      logger.error('グループの作成に失敗しました:', err);
       // エラーの詳細を表示
       if (err instanceof Error) {
-        console.error('エラー詳細:', err.message);
-        console.error('エラースタック:', err.stack);
+        logger.error('エラー詳細:', err.message);
+        logger.error('エラースタック:', err.stack);
       } else {
-        console.error('不明なエラー:', JSON.stringify(err, null, 2));
+        logger.error('不明なエラー:', JSON.stringify(err, null, 2));
       }
     } finally {
       setIsSubmitting(false);

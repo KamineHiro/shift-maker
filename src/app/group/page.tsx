@@ -7,6 +7,7 @@ import { useShiftApi, useStaffApi } from '@/hooks/useApi';
 import { ShiftData, ShiftInfo } from '@/types';
 import { formatDisplayDate } from '@/utils/helpers';
 import ShiftModal from '@/components/ShiftModal';
+import { logger } from '@/lib/logger';
 
 // APIエラー型の定義
 interface ApiError {
@@ -81,16 +82,16 @@ export default function GroupPage() {
         // スタッフデータの処理
         if (isSubscribed && staffResponse.success && Array.isArray(staffResponse.data)) {
           // グループIDに一致するスタッフのみが返されるはず
-          console.log(`グループID: ${group.groupId}のスタッフを表示します`);
-          console.log(`取得したスタッフ: ${staffResponse.data.length}人`);
+          logger.log(`グループID: ${group.groupId}のスタッフを表示します`);
+          logger.log(`取得したスタッフ: ${staffResponse.data.length}人`);
           
           if (staffResponse.data.length === 0) {
-            console.warn(`グループID: ${group.groupId}に登録されているスタッフが見つかりません`);
+            logger.warn(`グループID: ${group.groupId}に登録されているスタッフが見つかりません`);
           }
           
           setExistingStaff(staffResponse.data);
         } else if (isSubscribed) {
-          console.error('スタッフデータの取得に失敗:', staffResponse.error);
+          logger.error('スタッフデータの取得に失敗:', staffResponse.error);
           setExistingStaff([]);
         }
         
@@ -133,7 +134,7 @@ export default function GroupPage() {
         if (isSubscribed) {
           const apiError = error as ApiError;
           setError(apiError.message || 'データの読み込みに失敗しました');
-          console.error('データ読み込みエラー:', apiError);
+          logger.error('データ読み込みエラー:', apiError);
         setLoading(false);
         }
       }
@@ -163,7 +164,7 @@ export default function GroupPage() {
       
       if (!isStaffInCurrentGroup) {
         setError(`セキュリティエラー: 選択されたスタッフは現在のグループに所属していません`);
-        console.error(`セキュリティ警告: グループ ${group.groupId} に所属していないスタッフ ${selectedExistingStaffId} の選択が試みられました`);
+        logger.error(`セキュリティ警告: グループ ${group.groupId} に所属していないスタッフ ${selectedExistingStaffId} の選択が試みられました`);
         setLoading(false);
         return;
       }
@@ -214,7 +215,7 @@ export default function GroupPage() {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError;
-      console.error('スタッフ選択エラー:', apiError);
+      logger.error('スタッフ選択エラー:', apiError);
       setError(apiError.message || 'スタッフの取得中にエラーが発生しました');
     } finally {
       setLoading(false);
@@ -259,7 +260,7 @@ export default function GroupPage() {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError;
-      console.error('シフト更新エラー:', apiError);
+      logger.error('シフト更新エラー:', apiError);
       setError(apiError.message || 'シフトの更新中にエラーが発生しました');
     } finally {
       setLoading(false);
@@ -311,7 +312,7 @@ export default function GroupPage() {
     } catch (error: unknown) {
       const apiError = error as ApiError;
       setError(apiError.message || 'シフトの確定中にエラーが発生しました');
-      console.error('シフト確定エラー:', apiError);
+      logger.error('シフト確定エラー:', apiError);
     } finally {
       setLoading(false);
     }
@@ -337,7 +338,7 @@ export default function GroupPage() {
     } catch (error: unknown) {
       const apiError = error as ApiError;
       setError(apiError.message || 'シフト確定の取り消し中にエラーが発生しました');
-      console.error('シフト確定の取り消しエラー:', apiError);
+      logger.error('シフト確定の取り消しエラー:', apiError);
     } finally {
       setLoading(false);
     }
@@ -364,15 +365,15 @@ export default function GroupPage() {
       setError(isWorking ? '全日程を勤務可能に設定中...' : '全日程を休みに設定中...');
       
       // 現在表示されている日付を使用
-      console.log(`一括更新を開始: staffId=${staffId}, isWorking=${isWorking}, 日付数=${dates.length}`);
-      console.log('対象日付:', dates);
+      logger.log(`一括更新を開始: staffId=${staffId}, isWorking=${isWorking}, 日付数=${dates.length}`);
+      logger.log('対象日付:', dates);
       
       // 現在表示されている日付範囲を使用して更新を実行
       const response = await shiftApi.updateStaffShifts(staffId, isWorking, dates, {
         accessKey: group.accessKey,
         adminKey: group.adminKey,
       });
-      console.log('一括更新のレスポンス:', response);
+      logger.log('一括更新のレスポンス:', response);
       
       if (response.success) {
         // 成功メッセージを表示
@@ -388,18 +389,18 @@ export default function GroupPage() {
         
         while (retryCount < 5 && !shiftsUpdated) {
           try {
-            console.log(`シフトデータ再取得: 試行 ${retryCount + 1}`);
+            logger.log(`シフトデータ再取得: 試行 ${retryCount + 1}`);
             
             // 再取得前に段階的に長く待機（DB更新のタイムラグ対策）
             await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
             
             const shiftsResponse = await shiftApi.getStaffShifts(staffId);
-            console.log('再取得レスポンス:', shiftsResponse);
+            logger.log('再取得レスポンス:', shiftsResponse);
             
             if (shiftsResponse.success && shiftsResponse.data) {
               // データの検証（すべての日程が更新されているか確認）
               const newShifts = shiftsResponse.data as Record<string, ShiftInfo>;
-              console.log(`取得したシフト数: ${Object.keys(newShifts).length}`);
+              logger.log(`取得したシフト数: ${Object.keys(newShifts).length}`);
               
               // 全日程の中から一部をサンプルとして抽出してログ出力
               const shiftDates = Object.keys(newShifts).sort();
@@ -411,7 +412,7 @@ export default function GroupPage() {
                   [shiftDates[0], shiftDates[Math.floor(shiftDates.length / 2)], shiftDates[shiftDates.length - 1]];
                 
                 sampleDates.forEach(date => {
-                  console.log(`日付 ${date} のシフト:`, newShifts[date]);
+                  logger.log(`日付 ${date} のシフト:`, newShifts[date]);
                 });
                 
                 // 表示されている日付に対して更新検証（一部でも更新されていればOK）
@@ -419,39 +420,39 @@ export default function GroupPage() {
                   newShifts[date] && newShifts[date].isWorking === isWorking
                 );
                 
-                console.log(`更新された日付数: ${updatedDates.length}/${dates.length}`);
+                logger.log(`更新された日付数: ${updatedDates.length}/${dates.length}`);
                 
                 if (updatedDates.length > 0) {
                   // データが取得できていれば成功とみなす
                   setShifts(newShifts);
                   shiftsUpdated = true;
                   setError(`全日程を${actionMsg}に設定しました！`);
-                  console.log('シフトデータを正常に更新しました');
+                  logger.log('シフトデータを正常に更新しました');
                   
                   // 成功メッセージを5秒後に消す
                   setTimeout(() => {
                     setError(null);
                   }, 5000);
                 } else {
-                  console.warn('更新された日付が見つかりません。再試行します...');
+                  logger.warn('更新された日付が見つかりません。再試行します...');
                   retryCount++;
                 }
               } else {
-                console.warn('シフトデータが空です。再試行します...');
+                logger.warn('シフトデータが空です。再試行します...');
                 retryCount++;
               }
             } else {
-              console.warn('シフトデータの再取得に失敗:', shiftsResponse.error);
+              logger.warn('シフトデータの再取得に失敗:', shiftsResponse.error);
               retryCount++;
             }
           } catch (fetchError) {
-            console.error(`シフトデータの再取得に失敗 (試行 ${retryCount + 1}):`, fetchError);
+            logger.error(`シフトデータの再取得に失敗 (試行 ${retryCount + 1}):`, fetchError);
             retryCount++;
           }
         }
         
         if (!shiftsUpdated) {
-          console.error('シフトデータの再取得に失敗しました。ページを再読み込みしてください。');
+          logger.error('シフトデータの再取得に失敗しました。ページを再読み込みしてください。');
           // 再読み込みを促すメッセージ
           setError(`全日程を${actionMsg}に設定しました。データが最新ではない可能性があります。最新データを確認するには、画面を再読み込みしてください。`);
           
@@ -464,7 +465,7 @@ export default function GroupPage() {
         }
       } else {
         setError(response.error || 'シフトの一括更新に失敗しました');
-        console.error('一括更新エラー:', response.error);
+        logger.error('一括更新エラー:', response.error);
         // エラーメッセージを5秒後に消す
         setTimeout(() => {
           setError(null);
@@ -473,7 +474,7 @@ export default function GroupPage() {
     } catch (error: unknown) {
       const apiError = error as ApiError;
       setError(apiError.message || 'シフトの一括更新に失敗しました');
-      console.error('シフト一括更新エラー:', apiError);
+      logger.error('シフト一括更新エラー:', apiError);
       // エラーメッセージを5秒後に消す
       setTimeout(() => {
         setError(null);

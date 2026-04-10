@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { validate as isUUID } from 'uuid';
 
 export async function GET(
@@ -9,7 +10,7 @@ export async function GET(
   try {
     const { staffId } = await context.params; // ✅ `await` で `params` を取得
 
-    console.log("確定状態取得リクエスト (REST):", staffId);
+    logger.log("確定状態取得リクエスト (REST):", staffId);
 
     // UUIDのバリデーション
     if (!isUUID(staffId)) {
@@ -26,10 +27,10 @@ export async function GET(
       .eq('id', staffId)
       .maybeSingle();
 
-    console.log("🟢 スタッフ確定状態 (REST):", data);
+    logger.log("🟢 スタッフ確定状態 (REST):", data);
 
     if (error) {
-      console.error("❌ シフト確認状態取得エラー (REST):", error);
+      logger.error("❌ シフト確認状態取得エラー (REST):", error);
       return NextResponse.json(
         { success: false, error: 'シフト確認状態の取得に失敗しました' },
         { status: 500 }
@@ -43,7 +44,7 @@ export async function GET(
       }
     );
   } catch (error) {
-    console.error("❌ シフト確認状態取得エラー (REST):", error);
+    logger.error("❌ シフト確認状態取得エラー (REST):", error);
     return NextResponse.json(
       { success: false, error: 'シフト確認状態の取得に失敗しました' },
       { status: 500 }

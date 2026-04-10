@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { ApiResponse, ShiftData } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,7 +12,7 @@ export async function GET() {
       .select('*');
 
     if (error) {
-      console.error('スタッフデータの取得エラー:', error);
+      logger.error('スタッフデータの取得エラー:', error);
       throw error;
     }
 
@@ -22,7 +23,7 @@ export async function GET() {
     
     return NextResponse.json(response);
   } catch (error) {
-    console.error('スタッフデータの取得エラー:', error);
+    logger.error('スタッフデータの取得エラー:', error);
     const response: ApiResponse<null> = {
       success: false,
       error: error instanceof Error ? error.message : 'スタッフデータの取得に失敗しました'
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (error) {
-      console.error('スタッフ追加エラー:', error);
+      logger.error('スタッフ追加エラー:', error);
       throw error;
     }
     
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    console.error('スタッフの追加エラー:', error);
+    logger.error('スタッフの追加エラー:', error);
     const response: ApiResponse<null> = {
       success: false,
       error: error instanceof Error ? error.message : 'スタッフの追加に失敗しました'
