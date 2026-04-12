@@ -27,8 +27,7 @@
 ## 技術スタック
 
 - **フロントエンド**: Next.js 15.2.x、React 19、TypeScript、Tailwind CSS
-- **データ**: Supabase（PostgreSQL）、`@supabase/supabase-js`
-- **API**: Next.js API Routes（一部エンドポイント）
+- **データ**: Supabase（PostgreSQL）、`@supabase/supabase-js`（ブラウザから PostgREST / RPC を利用）
 - **認証・入室**: **Supabase Authentication は使用していません。** アクセスキー／管理者キーと `GroupContext`（`localStorage` の `groupAccess`）でグループにアクセスします。
 - **データベース側**: `groups` テーブルは RLS で直接参照を制限し、キー検証・グループ作成などは **RPC（`SECURITY DEFINER`）** 経由（マイグレーション参照）
 
@@ -92,7 +91,7 @@ npm run dev
 
 ```
 /src
-  /app              # App Router（ページ・API Routes）
+  /app              # App Router（ページ）
   /components       # UI コンポーネント
   /contexts         # GroupContext など
   /hooks            # useApi など
