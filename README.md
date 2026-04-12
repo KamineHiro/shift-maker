@@ -68,6 +68,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```env
 # true のときメンテナンスページのみ表示
 NEXT_PUBLIC_MAINTENANCE_MODE=false
+
+# true のとき、本番でも logger の log / info / warn をブラウザに出す（デバッグ用）
+NEXT_PUBLIC_VERBOSE_LOGS=false
 ```
 
 4. Supabase のスキーマを適用
@@ -91,13 +94,14 @@ npm run dev
 
 ```
 /src
-  /app              # App Router（ページ）
-  /components       # UI コンポーネント
+  /app              # App Router（ページ。トップはサーバー＋クライアント分割）
+  /components       # UI（ShiftModal, MaintenancePage, home/* など）
   /contexts         # GroupContext など
   /hooks            # useApi など
-  /lib              # Supabase クライアント等
+  /lib              # Supabase クライアント、logger など
   /services         # groupService, supabaseService など
-  /types            # 型定義
+  /types            # 型定義（database.types 含む）
+  /utils            # ヘルパー関数
 /supabase
   /migrations       # PostgreSQL マイグレーション（RLS・RPC 含む）
 ```
