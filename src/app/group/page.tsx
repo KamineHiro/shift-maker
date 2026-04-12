@@ -34,7 +34,9 @@ export default function GroupPage() {
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [isShiftConfirmed, setIsShiftConfirmed] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showStaffSelection, setShowStaffSelection] = useState(true);
+  /** 初回のみ false。localStorage の有無を判定するまでスタッフ選択を出さない（ちらつき防止） */
+  const [hasResolvedInitialStaff, setHasResolvedInitialStaff] = useState(false);
+  const [showStaffSelection, setShowStaffSelection] = useState(false);
   
   // グループ情報がない場合はトップページにリダイレクト（localStorage 復元後のみ）
   useEffect(() => {
@@ -48,6 +50,8 @@ export default function GroupPage() {
   useEffect(() => {
     let isSubscribed = true;
     if (!group?.groupId) return;
+
+    setHasResolvedInitialStaff(false);
 
     const fetchInitialData = async () => {
       try {
@@ -97,45 +101,47 @@ export default function GroupPage() {
         
         // ローカルストレージからスタッフ情報を取得
         if (isSubscribed) {
-        const storedStaffId = localStorage.getItem(`staffId_${group.groupId}`);
-        const storedStaffName = localStorage.getItem(`staffName_${group.groupId}`);
-        
-        if (storedStaffId && storedStaffName) {
-            // 現在の値と異なる場合のみ更新
+          const storedStaffId = localStorage.getItem(`staffId_${group.groupId}`);
+          const storedStaffName = localStorage.getItem(`staffName_${group.groupId}`);
+
+          if (storedStaffId && storedStaffName) {
             setStaffId((prev) => (prev === storedStaffId ? prev : storedStaffId));
             setStaffName((prev) => (prev === storedStaffName ? prev : storedStaffName));
-            
-            // 確定状態とシフトデータを並列で取得
+
             const [confirmResponse, shiftsResponse] = await Promise.all([
               shiftApi.getShiftConfirmation(storedStaffId),
-              shiftApi.getStaffShifts(storedStaffId)
+              shiftApi.getStaffShifts(storedStaffId),
             ]);
-            
+
             if (isSubscribed && confirmResponse.success && confirmResponse.data) {
               setIsShiftConfirmed(confirmResponse.data.isConfirmed);
-            localStorage.setItem(`shiftConfirmed_${group.groupId}_${storedStaffId}_individual`, 
-              confirmResponse.data.isConfirmed ? 'true' : 'false');
-          }
-          
+              localStorage.setItem(
+                `shiftConfirmed_${group.groupId}_${storedStaffId}_individual`,
+                confirmResponse.data.isConfirmed ? 'true' : 'false'
+              );
+            }
+
             if (isSubscribed && shiftsResponse.success && shiftsResponse.data) {
               setShifts(shiftsResponse.data);
             }
-            
+
             if (isSubscribed) {
               setShowStaffSelection(false);
             }
+          } else if (isSubscribed) {
+            setShowStaffSelection(true);
           }
-        }
-        
-        if (isSubscribed) {
-        setLoading(false);
         }
       } catch (error) {
         if (isSubscribed) {
           const apiError = error as ApiError;
           setError(apiError.message || 'データの読み込みに失敗しました');
           logger.error('データ読み込みエラー:', apiError);
-        setLoading(false);
+        }
+      } finally {
+        if (isSubscribed) {
+          setHasResolvedInitialStaff(true);
+          setLoading(false);
         }
       }
     };
@@ -554,7 +560,12 @@ export default function GroupPage() {
           </div>
         )}
         
-        {showStaffSelection ? (
+        {!hasResolvedInitialStaff ? (
+          <div className="bg-white rounded-lg shadow p-12 flex flex-col items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
+            <p className="mt-4 text-gray-600">読み込み中...</p>
+          </div>
+        ) : showStaffSelection ? (
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">スタッフを選択してください</h2>
             <p className="text-gray-600 mb-4">
