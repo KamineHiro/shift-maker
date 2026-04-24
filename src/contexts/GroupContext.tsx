@@ -89,9 +89,13 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       const groupAccess: GroupAccess = { ...groupInfo, adminKey };
       setGroup(groupAccess);
 
-      // localStorage には adminKey を保存しない
-      const { adminKey: _key, ...storableGroup } = groupAccess;
-      localStorage.setItem('groupAccess', JSON.stringify(storableGroup));
+      // adminKey を除いて localStorage に保存（漏洩リスク軽減）
+      localStorage.setItem('groupAccess', JSON.stringify({
+        groupId: groupAccess.groupId,
+        groupName: groupAccess.groupName,
+        isAdmin: groupAccess.isAdmin,
+        accessKey: groupAccess.accessKey,
+      }));
 
       router.push('/admin');
     } catch (err) {
@@ -122,9 +126,13 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
 
       setGroup(groupAccess);
 
-      // adminKey はメモリのみ保持。localStorage には保存しない（漏洩リスク軽減）
-      const { adminKey: _key, ...storableGroup } = groupAccess;
-      localStorage.setItem('groupAccess', JSON.stringify(storableGroup));
+      // adminKey を除いて localStorage に保存（漏洩リスク軽減）
+      localStorage.setItem('groupAccess', JSON.stringify({
+        groupId: groupAccess.groupId,
+        groupName: groupAccess.groupName,
+        isAdmin: groupAccess.isAdmin,
+        accessKey: groupAccess.accessKey,
+      }));
 
       // 管理者キーを返す
       return newGroup.adminKey;
