@@ -29,10 +29,8 @@ export default function HomeClient({ header, footer }: HomeClientProps) {
       setSaveAccessKey(true);
     }
 
-    const savedAdminKey = localStorage.getItem('savedAdminKey');
-    if (savedAdminKey) {
-      setAdminKey(savedAdminKey);
-    }
+    // savedAdminKey はセキュリティリスクのため保存しない。既存データがあれば削除する。
+    localStorage.removeItem('savedAdminKey');
   }, []);
 
   useEffect(() => {
@@ -75,13 +73,7 @@ export default function HomeClient({ header, footer }: HomeClientProps) {
 
     try {
       setIsSubmitting(true);
-
-      if (saveAccessKey) {
-        localStorage.setItem('savedAdminKey', adminKey.trim());
-      } else {
-        localStorage.removeItem('savedAdminKey');
-      }
-
+      // adminKey は localStorage に保存しない（漏洩リスク軽減）
       await accessAdminGroup(adminKey.trim());
     } catch (err) {
       logger.error('管理者アクセスに失敗しました:', err);
@@ -352,25 +344,6 @@ export default function HomeClient({ header, footer }: HomeClientProps) {
                       placeholder="管理者キーを入力"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center">
-                    <input
-                      id="saveAdminKey"
-                      name="saveAdminKey"
-                      type="checkbox"
-                      checked={saveAccessKey}
-                      onChange={(e) => setSaveAccessKey(e.target.checked)}
-                      className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-sky-300 rounded transition-colors duration-200"
-                    />
-                    <label htmlFor="saveAdminKey" className="ml-2 block text-sm text-sky-700">
-                      管理者キーを保存する
-                    </label>
-                  </div>
-                  <p className="mt-1 text-xs text-sky-600">
-                    ※このデバイスに管理者キーを保存します。共有デバイスでは注意してください。
-                  </p>
                 </div>
 
                 <div>

@@ -82,13 +82,14 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const groupAccess = await groupService.getGroupByAdminKey(adminKey);
       setGroup(groupAccess);
-      
-      // ローカルストレージに保存
-      localStorage.setItem('groupAccess', JSON.stringify(groupAccess));
-      
+
+      // adminKey はメモリのみ保持。localStorage には保存しない（漏洩リスク軽減）
+      const { adminKey: _key, ...storableGroup } = groupAccess;
+      localStorage.setItem('groupAccess', JSON.stringify(storableGroup));
+
       router.push('/admin');
     } catch (err) {
       logger.error('管理者グループへのアクセスに失敗しました:', err);
@@ -106,7 +107,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       setError(null);
 
       const newGroup = await groupService.createGroup(name);
-      
+
       // 管理者としてグループにアクセス
       const groupAccess: GroupAccess = {
         groupId: newGroup.id,
@@ -115,12 +116,13 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
         accessKey: newGroup.accessKey,
         adminKey: newGroup.adminKey,
       };
-      
+
       setGroup(groupAccess);
-      
-      // ローカルストレージに保存
-      localStorage.setItem('groupAccess', JSON.stringify(groupAccess));
-      
+
+      // adminKey はメモリのみ保持。localStorage には保存しない（漏洩リスク軽減）
+      const { adminKey: _key, ...storableGroup } = groupAccess;
+      localStorage.setItem('groupAccess', JSON.stringify(storableGroup));
+
       // 管理者キーを返す
       return newGroup.adminKey;
     } catch (err) {

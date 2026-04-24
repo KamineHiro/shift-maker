@@ -8,6 +8,7 @@ import { ShiftData, ShiftInfo } from '@/types';
 import { formatDisplayDate } from '@/utils/helpers';
 import ShiftModal from '@/components/ShiftModal';
 import { logger } from '@/lib/logger';
+import { groupService } from '@/services/groupService';
 
 // ShiftDataに確定状態を追加
 interface ExtendedShiftData extends ShiftData {
@@ -43,19 +44,32 @@ export default function AdminPage() {
   const [, setHoveredRowId] = useState<string | null>(null);
   const [showAdminKey, setShowAdminKey] = useState(false);
   
-  // グループ情報がない場合、または管理者でない場合はリダイレクト（localStorage 復元後のみ）
-  // adminKey が存在しない場合は localStorage 改ざんの可能性があるためトップへ戻す
+  // サーバー側で adminKey を検証してから管理者画面を表示する。
+  // localStorage の isAdmin / adminKey はクライアントで改ざん可能なため、
+  // 実際に Supabase RPC を叩いて有効なキーかどうかを確認する。
   useEffect(() => {
     if (!groupReady) return;
-    if (!group) {
+    if (!group || !group.adminKey) {
       router.replace('/');
       return;
     }
-    if (!group.isAdmin || !group.adminKey) {
-      router.replace('/group');
-      return;
-    }
-  }, [group, groupReady, router]);
+
+    let cancelled = false;
+    groupService.getGroupByAdminKey(group.adminKey)
+      .then(result => {
+        if (cancelled) return;
+        if (!result || result.groupId !== group.groupId) {
+          // キーが無効 or 別グループのキーが混入している
+          logger.warn('管理者キーの検証に失敗しました。トップページへリダイレクトします。');
+          router.replace('/');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) router.replace('/');
+      });
+
+    return () => { cancelled = true; };
+  }, [groupReady, group?.adminKey, group?.groupId]); // eslint-disable-line react-hooks/exhaustive-deps
   
   // 初期データの読み込み
   useEffect(() => {
