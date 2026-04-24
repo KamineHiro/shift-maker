@@ -74,12 +74,13 @@ export const groupService = {
       const row = Array.isArray(data) ? data[0] : data;
       if (!row) throw new Error('グループが見つかりませんでした');
 
+      // adminKey はネットワークレスポンスに載せない。
+      // 呼び出し元が入力値（ユーザーが知っているキー）を注入する。
       return {
         groupId: row.id,
         groupName: row.name,
         isAdmin: true,
         accessKey: row.access_key,
-        adminKey: row.admin_key,
       };
     } catch (error) {
       logger.error('グループの取得に失敗しました:', error);

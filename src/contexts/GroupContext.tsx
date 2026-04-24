@@ -83,10 +83,13 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const groupAccess = await groupService.getGroupByAdminKey(adminKey);
+      // RPC はグループ情報のみ返す（adminKey はレスポンスに含まれない）
+      const groupInfo = await groupService.getGroupByAdminKey(adminKey);
+      // adminKey はユーザーの入力値をそのままメモリに保持（ネットワーク越しに返させない）
+      const groupAccess: GroupAccess = { ...groupInfo, adminKey };
       setGroup(groupAccess);
 
-      // adminKey はメモリのみ保持。localStorage には保存しない（漏洩リスク軽減）
+      // localStorage には adminKey を保存しない
       const { adminKey: _key, ...storableGroup } = groupAccess;
       localStorage.setItem('groupAccess', JSON.stringify(storableGroup));
 
