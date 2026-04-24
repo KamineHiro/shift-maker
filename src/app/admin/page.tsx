@@ -41,15 +41,17 @@ export default function AdminPage() {
   const [copyAdminKeySuccess, setCopyAdminKeySuccess] = useState<string | null>(null);
   const [updatingConfirmStatus, setUpdatingConfirmStatus] = useState<string | null>(null);
   const [, setHoveredRowId] = useState<string | null>(null);
+  const [showAdminKey, setShowAdminKey] = useState(false);
   
   // グループ情報がない場合、または管理者でない場合はリダイレクト（localStorage 復元後のみ）
+  // adminKey が存在しない場合は localStorage 改ざんの可能性があるためトップへ戻す
   useEffect(() => {
     if (!groupReady) return;
     if (!group) {
       router.replace('/');
       return;
     }
-    if (!group.isAdmin) {
+    if (!group.isAdmin || !group.adminKey) {
       router.replace('/group');
       return;
     }
@@ -809,16 +811,26 @@ export default function AdminPage() {
             <div>
               <h3 className="text-lg font-medium text-sky-700 mb-2">管理者キー</h3>
               <div className="bg-sky-50 rounded-lg p-4 flex items-center justify-between">
-                <code className="font-mono text-sm text-sky-800 break-all">{group.adminKey}</code>
-                <button
-                  onClick={copyAdminKeyToClipboard}
-                  className="ml-4 inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200"
-                >
-                  <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                  </svg>
-                  {copyAdminKeySuccess || 'コピー'}
-                </button>
+                <code className="font-mono text-sm text-sky-800 break-all">
+                  {showAdminKey ? group.adminKey : '••••••••'}
+                </code>
+                <div className="ml-4 flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => setShowAdminKey(prev => !prev)}
+                    className="inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200"
+                  >
+                    {showAdminKey ? '隠す' : '表示'}
+                  </button>
+                  <button
+                    onClick={copyAdminKeyToClipboard}
+                    className="inline-flex items-center px-3 py-1 border border-transparent rounded-lg shadow-sm text-sm font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200"
+                  >
+                    <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                    {copyAdminKeySuccess || 'コピー'}
+                  </button>
+                </div>
               </div>
               <p className="mt-2 text-sm text-sky-600">
                 このキーは管理者専用です。安全に保管してください。

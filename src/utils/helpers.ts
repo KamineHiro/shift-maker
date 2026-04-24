@@ -5,13 +5,17 @@
  */
 export function generateRandomString(length: number): string {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const limit = Math.floor(256 / characters.length) * characters.length;
   let result = '';
-  
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    result += characters.charAt(randomIndex);
+  while (result.length < length) {
+    const array = new Uint8Array((length - result.length) * 2);
+    crypto.getRandomValues(array);
+    for (const byte of array) {
+      if (result.length >= length) break;
+      // バイアスを避けるため limit 以上のバイト値は捨てる
+      if (byte < limit) result += characters[byte % characters.length];
+    }
   }
-  
   return result;
 }
 
