@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateRandomString } from '@/utils/helpers';
 
 export const groupService = {
-  async createGroup(name: string, adminPassword: string): Promise<Group> {
+  async createGroup(name: string): Promise<Group> {
     try {
       const id = uuidv4();
       const accessKey = generateRandomString(8);
@@ -16,7 +16,7 @@ export const groupService = {
         p_name: name,
         p_access_key: accessKey,
         p_admin_key: adminKey,
-        p_admin_password: adminPassword,
+        p_admin_password: '',
       });
 
       if (error) {
@@ -87,23 +87,4 @@ export const groupService = {
     }
   },
 
-  /** 管理者キーとパスワードが一致するか（groups 直参照は RLS で不可のため RPC） */
-  async verifyAdminPassword(adminKey: string, password: string): Promise<boolean> {
-    try {
-      const { data, error } = await supabase.rpc('verify_admin_password', {
-        p_admin_key: adminKey,
-        p_plain_password: password,
-      });
-
-      if (error) {
-        logger.error('管理者パスワードの検証に失敗しました:', error);
-        return false;
-      }
-
-      return data === true;
-    } catch (error) {
-      logger.error('管理者パスワードの検証に失敗しました:', error);
-      return false;
-    }
-  },
 };

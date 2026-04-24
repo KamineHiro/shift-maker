@@ -101,7 +101,7 @@ export default function AdminPage() {
           // 各スタッフの確定状態を並列に取得
           const staffWithConfirmation = await Promise.all(
             staffArray.map(async (staff) => {
-              const staffId = staff.staff_id || staff.id;
+              const staffId = staff.staff_id;
               if (!staffId) {
                 logger.error('スタッフIDが見つかりません:', staff);
                 return staff;

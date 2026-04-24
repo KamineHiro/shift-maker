@@ -15,7 +15,7 @@ interface GroupContextType {
   error: string | null;
   accessGroup: (accessKey: string) => Promise<void>;
   accessAdminGroup: (adminKey: string) => Promise<void>;
-  createGroup: (name: string, adminPassword: string) => Promise<string>;
+  createGroup: (name: string) => Promise<string>;
   leaveGroup: () => void;
   clearError: () => void;
 }
@@ -100,12 +100,12 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
   };
 
   // 新しいグループを作成
-  const createGroup = async (name: string, adminPassword: string) => {
+  const createGroup = async (name: string) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const newGroup = await groupService.createGroup(name, adminPassword);
+
+      const newGroup = await groupService.createGroup(name);
       
       // 管理者としてグループにアクセス
       const groupAccess: GroupAccess = {

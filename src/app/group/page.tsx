@@ -164,8 +164,7 @@ export default function GroupPage() {
       // 選択されたスタッフが現在のグループに所属していることを確認
       // まず選択されたスタッフIDが現在のexistingStaffリストに含まれているか確認
       const isStaffInCurrentGroup = existingStaff.some(staff => {
-        const staffId = staff.id || staff.staff_id;
-        return staffId === selectedExistingStaffId;
+        return staff.staff_id === selectedExistingStaffId;
       });
       
       if (!isStaffInCurrentGroup) {
@@ -180,12 +179,8 @@ export default function GroupPage() {
       if (response.success && response.data) {
         const staffData = response.data as ShiftData;
         
-        let actualStaffId = '';
-        if (staffData.id) {
-          actualStaffId = staffData.id;
-        } else if (staffData.staff_id) {
-          actualStaffId = staffData.staff_id;
-        } else {
+        const actualStaffId = staffData.staff_id;
+        if (!actualStaffId) {
           setError('スタッフIDが見つかりません');
           setLoading(false);
           return;
@@ -587,10 +582,8 @@ export default function GroupPage() {
                   >
                     <option value="">選択してください</option>
                     {existingStaff.map((staff) => {
-                      // staff.id がある場合はそれを使用、なければ staff_id を使用
-                      const staffId = staff.id || staff.staff_id;
                       return (
-                        <option key={staffId} value={staffId}>
+                        <option key={staff.staff_id} value={staff.staff_id}>
                           {staff.name}
                         </option>
                       );

@@ -18,7 +18,6 @@ export default function HomeClient({ header, footer }: HomeClientProps) {
   const [accessKey, setAccessKey] = useState('');
   const [adminKey, setAdminKey] = useState('');
   const [groupName, setGroupName] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdAdminKey, setCreatedAdminKey] = useState<string | null>(null);
   const [saveAccessKey, setSaveAccessKey] = useState(false);
@@ -93,13 +92,13 @@ export default function HomeClient({ header, footer }: HomeClientProps) {
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting || !groupName.trim() || !adminPassword.trim()) return;
+    if (isSubmitting || !groupName.trim()) return;
 
     try {
       setIsSubmitting(true);
       logger.log('グループ作成開始:', { name: groupName.trim() });
 
-      const adminKeyResult = await createGroup(groupName.trim(), adminPassword.trim());
+      const adminKeyResult = await createGroup(groupName.trim());
       logger.log('グループ作成成功:', { adminKey: adminKeyResult });
 
       setCreatedAdminKey(adminKeyResult);
@@ -308,29 +307,11 @@ export default function HomeClient({ header, footer }: HomeClientProps) {
                 </div>
 
                 <div>
-                  <label htmlFor="adminPassword" className="block text-sm font-medium text-sky-700">
-                    管理者パスワード
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="adminPassword"
-                      name="adminPassword"
-                      type="password"
-                      required
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      className="appearance-none block w-full px-3 py-2 border border-sky-400 rounded-lg shadow-sm text-sky-900 dark:text-sky-100 placeholder-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors duration-200"
-                      placeholder="管理者用のパスワード"
-                    />
-                  </div>
-                </div>
-
-                <div>
                   <button
                     type="submit"
-                    disabled={isSubmitting || !groupName.trim() || !adminPassword.trim()}
+                    disabled={isSubmitting || !groupName.trim()}
                     className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 ${
-                      isSubmitting || !groupName.trim() || !adminPassword.trim() ? 'opacity-50 cursor-not-allowed' : ''
+                      isSubmitting || !groupName.trim() ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
                     {isSubmitting ? (
