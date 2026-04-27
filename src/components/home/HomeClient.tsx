@@ -35,16 +35,21 @@ export default function HomeClient({ header, footer }: HomeClientProps) {
 
   useEffect(() => {
     if (group && !createdAdminKey) {
-      const redirect = async () => {
-        if (group.isAdmin) {
-          await router.push('/admin');
-        } else {
-          await router.push('/group');
-        }
-      };
-      redirect();
+      if (group.isAdmin && group.adminKey) {
+        router.push('/admin');
+      } else if (!group.isAdmin) {
+        router.push('/group');
+      }
+      // isAdmin=true だが adminKey がない（ページリフレッシュ後）はリダイレクトしない
     }
   }, [group, createdAdminKey, router]);
+
+  // ページリフレッシュ後の管理者はadminタブを自動で開く
+  useEffect(() => {
+    if (group?.isAdmin && !group?.adminKey) {
+      setActiveTab('admin');
+    }
+  }, [group]);
 
   const handleAccessGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +112,10 @@ export default function HomeClient({ header, footer }: HomeClientProps) {
     }
   };
 
-  if (group && !createdAdminKey) {
+  const willRedirect = group && !createdAdminKey &&
+    ((group.isAdmin && !!group.adminKey) || !group.isAdmin);
+
+  if (willRedirect) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-sky-50">
         <div className="text-center">

@@ -23,7 +23,7 @@ interface ApiError {
 
 export default function AdminPage() {
   const router = useRouter();
-  const { group, groupReady, leaveGroup } = useGroup();
+  const { group, groupReady, leaveGroup, clearAdminKey } = useGroup();
   const staffApi = useStaffApi();
   const shiftApi = useShiftApi();
   
@@ -43,14 +43,20 @@ export default function AdminPage() {
   const [updatingConfirmStatus, setUpdatingConfirmStatus] = useState<string | null>(null);
   const [, setHoveredRowId] = useState<string | null>(null);
   const [showAdminKey, setShowAdminKey] = useState(false);
-  
+  // clearAdminKey で group.adminKey が変化すると useEffect が再実行されるため、
+  // このフラグで二重リダイレクトを防ぐ。
+  const redirected = React.useRef(false);
+
   // サーバー側で adminKey を検証してから管理者画面を表示する。
   // localStorage の isAdmin / adminKey はクライアントで改ざん可能なため、
   // 実際に Supabase RPC を叩いて有効なキーかどうかを確認する。
   useEffect(() => {
     if (!groupReady) return;
     if (!group || !group.adminKey) {
-      router.replace('/');
+      if (!redirected.current) {
+        redirected.current = true;
+        router.replace('/');
+      }
       return;
     }
 
@@ -59,13 +65,20 @@ export default function AdminPage() {
       .then(result => {
         if (cancelled) return;
         if (!result || result.groupId !== group.groupId) {
-          // キーが無効 or 別グループのキーが混入している
           logger.warn('管理者キーの検証に失敗しました。トップページへリダイレクトします。');
-          router.replace('/');
+          if (!redirected.current) {
+            redirected.current = true;
+            clearAdminKey();
+            router.replace('/');
+          }
         }
       })
       .catch(() => {
-        if (!cancelled) router.replace('/');
+        if (!cancelled && !redirected.current) {
+          redirected.current = true;
+          clearAdminKey();
+          router.replace('/');
+        }
       });
 
     return () => { cancelled = true; };

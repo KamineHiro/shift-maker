@@ -17,6 +17,7 @@ interface GroupContextType {
   accessAdminGroup: (adminKey: string) => Promise<void>;
   createGroup: (name: string) => Promise<string>;
   leaveGroup: () => void;
+  clearAdminKey: () => void;
   clearError: () => void;
 }
 
@@ -152,6 +153,11 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
     router.push('/');
   };
 
+  // API検証失敗時にメモリ上の adminKey のみ消去（isAdmin/accessKey は保持）
+  const clearAdminKey = () => {
+    setGroup(prev => prev ? { ...prev, adminKey: undefined } : null);
+  };
+
   // エラーをクリア
   const clearError = () => {
     setError(null);
@@ -166,6 +172,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
     accessAdminGroup,
     createGroup,
     leaveGroup,
+    clearAdminKey,
     clearError
   };
 
