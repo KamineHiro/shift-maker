@@ -143,7 +143,6 @@ export interface Database {
           id: string
           name: string
           access_key: string
-          admin_key: string
         }[]
       }
       get_group_shift_schedule: {
