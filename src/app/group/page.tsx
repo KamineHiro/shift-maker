@@ -64,7 +64,7 @@ export default function GroupPage() {
             accessKey: group.accessKey,
             adminKey: group.adminKey,
           }),
-          staffApi.getStaffList(group.groupId)
+          staffApi.getStaffList(group.groupId, { accessKey: group.accessKey })
         ]);
 
         // 日付データの処理
@@ -109,8 +109,8 @@ export default function GroupPage() {
             setStaffName((prev) => (prev === storedStaffName ? prev : storedStaffName));
 
             const [confirmResponse, shiftsResponse] = await Promise.all([
-              shiftApi.getShiftConfirmation(storedStaffId),
-              shiftApi.getStaffShifts(storedStaffId),
+              shiftApi.getShiftConfirmation(storedStaffId, { accessKey: group.accessKey }),
+              shiftApi.getStaffShifts(storedStaffId, { accessKey: group.accessKey }),
             ]);
 
             if (isSubscribed && confirmResponse.success && confirmResponse.data) {
@@ -174,35 +174,35 @@ export default function GroupPage() {
         return;
       }
       
-      const response = await staffApi.getStaff(selectedExistingStaffId);
-      
+      const response = await staffApi.getStaff(selectedExistingStaffId, { accessKey: group.accessKey });
+
       if (response.success && response.data) {
         const staffData = response.data as ShiftData;
-        
+
         const actualStaffId = staffData.staff_id;
         if (!actualStaffId) {
           setError('スタッフIDが見つかりません');
           setLoading(false);
           return;
         }
-        
+
         setStaffId(actualStaffId);
         setStaffName(staffData.name);
-        
+
         localStorage.setItem(`staffId_${group.groupId}`, actualStaffId);
         localStorage.setItem(`staffName_${group.groupId}`, staffData.name);
-        
-        const confirmResponse = await shiftApi.getShiftConfirmation(actualStaffId);
-        
+
+        const confirmResponse = await shiftApi.getShiftConfirmation(actualStaffId, { accessKey: group.accessKey });
+
         if (confirmResponse.success && confirmResponse.data) {
           setIsShiftConfirmed(confirmResponse.data.isConfirmed);
-          localStorage.setItem(`shiftConfirmed_${group.groupId}_${actualStaffId}_individual`, 
+          localStorage.setItem(`shiftConfirmed_${group.groupId}_${actualStaffId}_individual`,
             confirmResponse.data.isConfirmed ? 'true' : 'false');
         } else {
           setIsShiftConfirmed(false);
         }
-        
-        const shiftsResponse = await shiftApi.getStaffShifts(actualStaffId);
+
+        const shiftsResponse = await shiftApi.getStaffShifts(actualStaffId, { accessKey: group.accessKey });
         
         if (shiftsResponse.success && shiftsResponse.data) {
           setShifts(shiftsResponse.data as Record<string, ShiftInfo>);
@@ -243,7 +243,7 @@ export default function GroupPage() {
         date: selectedDate
       };
       
-      const result = await shiftApi.updateShift(staffId, selectedDate, completeShiftInfo);
+      const result = await shiftApi.updateShift(staffId, selectedDate, completeShiftInfo, { accessKey: group?.accessKey });
       
       if (result) {
         setShifts(prev => ({
@@ -298,14 +298,14 @@ export default function GroupPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await shiftApi.confirmShift(staffId);
-      
+      const response = await shiftApi.confirmShift(staffId, { accessKey: group.accessKey });
+
       if (response.success && response.data) {
         setIsShiftConfirmed(response.data.isConfirmed);
-        
-        localStorage.setItem(`shiftConfirmed_${group.groupId}_${staffId}_individual`, 
+
+        localStorage.setItem(`shiftConfirmed_${group.groupId}_${staffId}_individual`,
           response.data.isConfirmed ? 'true' : 'false');
-          
+
         setShowConfirmDialog(false);
       } else {
         setError(response.error || 'シフトの確定に失敗しました');
@@ -326,7 +326,7 @@ export default function GroupPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await shiftApi.unconfirmShift(staffId);
+      const response = await shiftApi.unconfirmShift(staffId, { accessKey: group.accessKey });
       
       if (response.success && response.data) {
         setIsShiftConfirmed(response.data.isConfirmed);
@@ -395,7 +395,7 @@ export default function GroupPage() {
             // 再取得前に段階的に長く待機（DB更新のタイムラグ対策）
             await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
             
-            const shiftsResponse = await shiftApi.getStaffShifts(staffId);
+            const shiftsResponse = await shiftApi.getStaffShifts(staffId, { accessKey: group.accessKey });
             logger.log('再取得レスポンス:', shiftsResponse);
             
             if (shiftsResponse.success && shiftsResponse.data) {

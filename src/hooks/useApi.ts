@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { ApiResponse, ShiftData, ShiftInfo } from '@/types';
-import { staffService, shiftService } from '@/services/supabaseService';
+import { staffService, shiftService, GroupSecretKeys } from '@/services/supabaseService';
 import { logger } from '@/lib/logger';
 
 interface ApiState<T> {
@@ -61,29 +61,29 @@ export function useStaffApi() {
   const api = useApi<ShiftData | ShiftData[]>();
 
   // スタッフ一覧を取得
-  const getStaffList = useCallback((groupId?: string) => {
-    return api.callApi(() => staffService.getStaffList(groupId));
+  const getStaffList = useCallback((groupId?: string, keys?: GroupSecretKeys) => {
+    return api.callApi(() => staffService.getStaffList(groupId, keys));
   }, [api]);
 
   // 特定のスタッフを取得
-  const getStaff = useCallback((id: string) => {
+  const getStaff = useCallback((id: string, keys?: GroupSecretKeys) => {
     logger.log('useStaffApi.getStaff呼び出し:', { id, type: typeof id });
-    return api.callApi(() => staffService.getStaff(id));
+    return api.callApi(() => staffService.getStaff(id, keys));
   }, [api]);
 
   // スタッフを追加
-  const addStaff = useCallback((name: string, groupId?: string) => {
-    return api.callApi(() => staffService.addStaff(name, groupId));
+  const addStaff = useCallback((name: string, groupId?: string, keys?: GroupSecretKeys) => {
+    return api.callApi(() => staffService.addStaff(name, groupId, keys));
   }, [api]);
 
   // スタッフ情報を更新
-  const updateStaff = useCallback((id: string, name: string) => {
-    return api.callApi(() => staffService.updateStaff(id, name));
+  const updateStaff = useCallback((id: string, name: string, keys?: GroupSecretKeys) => {
+    return api.callApi(() => staffService.updateStaff(id, name, keys));
   }, [api]);
 
   // スタッフを削除
-  const deleteStaff = useCallback((id: string) => {
-    return api.callApi(() => staffService.deleteStaff(id));
+  const deleteStaff = useCallback((id: string, keys?: GroupSecretKeys) => {
+    return api.callApi(() => staffService.deleteStaff(id, keys));
   }, [api]);
 
   return {
@@ -123,27 +123,27 @@ export function useShiftApi() {
   }, []);
   
   // 特定の日付のシフト情報を取得
-  const getShift = useCallback((staffId: string, date: string) => {
-    return api.callApi(() => shiftService.getShift(staffId, date));
+  const getShift = useCallback((staffId: string, date: string, keys?: GroupSecretKeys) => {
+    return api.callApi(() => shiftService.getShift(staffId, date, keys));
   }, [api]);
-  
+
   // シフト情報を更新
-  const updateShift = useCallback(async (staffId: string, date: string, shiftInfo: ShiftInfo): Promise<ShiftInfo | null> => {
+  const updateShift = useCallback(async (staffId: string, date: string, shiftInfo: ShiftInfo, keys?: GroupSecretKeys): Promise<ShiftInfo | null> => {
     try {
       logger.log('API呼び出し - updateShift:', { staffId, date, shiftInfo });
-      
+
       if (!staffId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId)) {
         throw new Error(`無効なスタッフID: ${staffId}`);
       }
-      
+
       const completeShiftInfo: ShiftInfo = {
         ...shiftInfo,
         staff_id: staffId,
         date: date
       };
-      
+
       try {
-        const result = await shiftService.updateShift(completeShiftInfo);
+        const result = await shiftService.updateShift(completeShiftInfo, keys);
         logger.log('シフト更新成功:', result);
         return result;
       } catch (error: unknown) {
@@ -166,13 +166,13 @@ export function useShiftApi() {
   }, []);
   
   // シフト情報を削除
-  const deleteShift = useCallback((staffId: string, date: string) => {
-    return api.callApi(() => shiftService.deleteShift(staffId, date));
+  const deleteShift = useCallback((staffId: string, date: string, keys?: GroupSecretKeys) => {
+    return api.callApi(() => shiftService.deleteShift(staffId, date, keys));
   }, [api]);
-  
+
   // スタッフのすべてのシフト情報を取得
-  const getStaffShifts = useCallback((staffId: string) => {
-    return api.callApi(() => shiftService.getStaffShifts(staffId));
+  const getStaffShifts = useCallback((staffId: string, keys?: GroupSecretKeys) => {
+    return api.callApi(() => shiftService.getStaffShifts(staffId, keys));
   }, [api]);
   
   // 日付範囲を保存
@@ -305,9 +305,9 @@ export function useShiftApi() {
   }, [getPastShifts]);
   
   // 6週間以上前のシフトデータを削除
-  const cleanupOldShifts = useCallback(async () => {
+  const cleanupOldShifts = useCallback(async (keys?: GroupSecretKeys) => {
     try {
-      const response = await api.callApi(() => shiftService.cleanupOldShifts());
+      const response = await api.callApi(() => shiftService.cleanupOldShifts(keys));
       return response;
     } catch (error: unknown) {
       logger.error('古いシフトデータの削除エラー:', error);
@@ -317,7 +317,7 @@ export function useShiftApi() {
   }, [api]);
 
   // シフト確定状態を取得
-  const getShiftConfirmation = useCallback(async (staffId: string) => {
+  const getShiftConfirmation = useCallback(async (staffId: string, keys?: GroupSecretKeys) => {
     // キャッシュをチェック
     if (confirmationCache.current[staffId] !== undefined) {
       return {
@@ -327,13 +327,13 @@ export function useShiftApi() {
     }
 
     try {
-      const response = await shiftService.getShiftConfirmation(staffId);
-      
+      const response = await shiftService.getShiftConfirmation(staffId, keys);
+
       // キャッシュを更新
       if (response.success && response.data) {
         confirmationCache.current[staffId] = response.data.isConfirmed;
       }
-      
+
       return response;
     } catch (error: unknown) {
       logger.error('シフト確定状態の取得に失敗しました:', error);
@@ -342,15 +342,15 @@ export function useShiftApi() {
   }, []);
 
   // シフトを確定
-  const confirmShift = useCallback(async (staffId: string) => {
+  const confirmShift = useCallback(async (staffId: string, keys?: GroupSecretKeys) => {
     try {
-      const response = await shiftService.confirmShift(staffId);
-      
+      const response = await shiftService.confirmShift(staffId, keys);
+
       // キャッシュを更新
       if (response.success && response.data) {
         confirmationCache.current[staffId] = true;
       }
-      
+
       return response;
     } catch (error: unknown) {
       logger.error('シフト確定に失敗しました:', error);
@@ -359,15 +359,15 @@ export function useShiftApi() {
   }, []);
 
   // シフト確定を取り消し
-  const unconfirmShift = useCallback(async (staffId: string) => {
+  const unconfirmShift = useCallback(async (staffId: string, keys?: GroupSecretKeys) => {
     try {
-      const response = await shiftService.unconfirmShift(staffId);
-      
+      const response = await shiftService.unconfirmShift(staffId, keys);
+
       // キャッシュを更新
       if (response.success && response.data) {
         confirmationCache.current[staffId] = false;
       }
-      
+
       return response;
     } catch (error: unknown) {
       logger.error('シフト確定解除に失敗しました:', error);

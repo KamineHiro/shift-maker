@@ -99,7 +99,7 @@ export default function AdminPage() {
             accessKey: group.accessKey,
             adminKey: group.adminKey,
           }),
-          staffApi.getStaffList(group.groupId)
+          staffApi.getStaffList(group.groupId, { accessKey: group.accessKey })
         ]);
 
         // 日付範囲の処理
@@ -137,7 +137,7 @@ export default function AdminPage() {
               }
               
               logger.log(`確定状態を取得中 - スタッフID: ${staffId}`);
-              const confirmResponse = await shiftApi.getShiftConfirmation(staffId);
+              const confirmResponse = await shiftApi.getShiftConfirmation(staffId, { accessKey: group.accessKey });
               return {
                 ...staff,
                 staff_id: staffId, // staff_idを確実に設定
@@ -249,7 +249,10 @@ export default function AdminPage() {
         updatedAt: new Date().toISOString()
       };
       
-      const response = await shiftApi.updateShift(selectedStaff.id, selectedDate, completeShiftInfo);
+      const response = await shiftApi.updateShift(selectedStaff.id, selectedDate, completeShiftInfo, {
+        accessKey: group?.accessKey,
+        adminKey: group?.adminKey,
+      });
       
       if (response) {
         logger.log('管理者シフト更新成功:', response);
@@ -304,7 +307,7 @@ export default function AdminPage() {
     try {
       setLoading(true);
       
-      const response = await staffApi.addStaff(newStaffName.trim(), group.groupId);
+      const response = await staffApi.addStaff(newStaffName.trim(), group.groupId, { adminKey: group.adminKey });
       
       if (response.success && response.data) {
         // 成功したら、ローカルの状態も更新
@@ -334,10 +337,11 @@ export default function AdminPage() {
   // スタッフ削除の処理
   const handleDeleteStaff = async (staffId: string) => {
     if (!confirm('このスタッフを削除してもよろしいですか？')) return;
-    
+    if (!group) return;
+
     try {
       setLoading(true);
-      const response = await staffApi.deleteStaff(staffId);
+      const response = await staffApi.deleteStaff(staffId, { adminKey: group.adminKey });
       
       if (response.success) {
         // 成功したら、ローカルの状態も更新
@@ -391,10 +395,10 @@ export default function AdminPage() {
     let initialTimeout: NodeJS.Timeout | null = null;
 
     const cleanupOldData = async () => {
-      if (!group?.groupId || !isSubscribed) return;
+      if (!group?.groupId || !group?.adminKey || !isSubscribed) return;
 
       try {
-        const response = await shiftApi.cleanupOldShifts();
+        const response = await shiftApi.cleanupOldShifts({ adminKey: group.adminKey });
         if (!response.success && isSubscribed) {
           logger.warn('古いシフトデータの自動削除:', response.error);
         } else if (response.success && response.data) {
@@ -435,16 +439,18 @@ export default function AdminPage() {
   
   // シフト確定状態を切り替える関数
   const toggleShiftConfirmation = async (staffId: string, currentStatus: boolean | undefined) => {
+    if (!group) return;
+
     try {
       setUpdatingConfirmStatus(staffId);
-      
+
       let response;
       if (currentStatus) {
         // 現在確定済みなら解除する
-        response = await shiftApi.unconfirmShift(staffId);
+        response = await shiftApi.unconfirmShift(staffId, { accessKey: group.accessKey });
       } else {
         // 未確定なら確定する
-        response = await shiftApi.confirmShift(staffId);
+        response = await shiftApi.confirmShift(staffId, { accessKey: group.accessKey });
       }
       
       if (response.success && response.data) {

@@ -1,21 +1,27 @@
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { ShiftData, ShiftInfo } from '@/types';
-import { v4 as uuidv4, validate as isUUID } from 'uuid';
+import { validate as isUUID } from 'uuid';
 
-/** groups テーブルは RLS のため、日付範囲取得にアクセスキーまたは管理者キーが必要 */
+/** shifts / staff テーブルは RLS のため、全操作にアクセスキーまたは管理者キーが必要 */
 export type GroupSecretKeys = { accessKey?: string; adminKey?: string };
+
+/** admin_key があれば管理者権限、なければ access_key を使う（無ければ null） */
+function resolveSecret(keys?: GroupSecretKeys): { secret: string; isAdminKey: boolean } | null {
+  if (keys?.adminKey) return { secret: keys.adminKey, isAdminKey: true };
+  if (keys?.accessKey) return { secret: keys.accessKey, isAdminKey: false };
+  return null;
+}
 
 async function fetchShiftScheduleFromRpc(
   keys: GroupSecretKeys
 ): Promise<{ startDate: string; days: number } | null> {
-  const useAdmin = !!keys.adminKey;
-  const secret = keys.adminKey ?? keys.accessKey;
-  if (!secret) return null;
+  const resolved = resolveSecret(keys);
+  if (!resolved) return null;
 
   const { data, error } = await supabase.rpc('get_group_shift_schedule', {
-    p_secret: secret,
-    p_is_admin_key: useAdmin,
+    p_secret: resolved.secret,
+    p_is_admin_key: resolved.isAdminKey,
   });
 
   if (error) throw error;
@@ -32,45 +38,41 @@ async function fetchShiftScheduleFromRpc(
 // スタッフ関連の操作
 export const staffService = {
   // スタッフ一覧を取得
-  async getStaffList(groupId?: string): Promise<ShiftData[]> {
+  async getStaffList(groupId?: string, keys?: GroupSecretKeys): Promise<ShiftData[]> {
     try {
       logger.log(`スタッフ一覧取得 - グループID: ${groupId || '未指定'}`);
-      
-      // スタッフデータを取得
-      let query = supabase
-        .from('staff')
-        .select('*')
-        .order('created_at', { ascending: true });
-      
-      // グループIDが指定されている場合はフィルタリング
-      if (groupId) {
-        logger.log(`グループID: ${groupId} でスタッフをフィルタリングします`);
-        query = query.eq('group_id', groupId);
-      } else {
-        logger.warn('グループIDが指定されていません。すべてのスタッフが返されます');
+
+      const resolved = resolveSecret(keys);
+      if (!resolved) {
+        logger.warn('シークレットが指定されていないため、スタッフ一覧は取得できません');
+        return [];
       }
-      
-      const { data: staffData, error: staffError } = await query;
+
+      const { data: staffData, error: staffError } = await supabase.rpc('get_staff_list', {
+        p_secret: resolved.secret,
+        p_is_admin_key: resolved.isAdminKey,
+      });
 
       if (staffError) {
         logger.error('スタッフデータ取得エラー:', staffError);
         throw staffError;
       }
-      
-      if (!staffData) {
+
+      if (!staffData || staffData.length === 0) {
         logger.log('スタッフデータが見つかりません');
         return [];
       }
-      
+
       logger.log(`取得したスタッフ数: ${staffData.length}人`);
 
       // 各スタッフのシフト情報を取得
       const staffWithShifts: ShiftData[] = await Promise.all(
         staffData.map(async (staff) => {
-          const { data: shiftsData, error: shiftsError } = await supabase
-            .from('shifts')
-            .select('*')
-            .eq('staff_id', staff.id);
+          const { data: shiftsData, error: shiftsError } = await supabase.rpc('get_staff_shifts', {
+            p_secret: resolved.secret,
+            p_staff_id: staff.id,
+            p_is_admin_key: resolved.isAdminKey,
+          });
 
           if (shiftsError) throw shiftsError;
 
@@ -103,30 +105,38 @@ export const staffService = {
   },
 
   // 特定のスタッフを取得
-  async getStaff(id: string): Promise<ShiftData | null> {
+  async getStaff(id: string, keys?: GroupSecretKeys): Promise<ShiftData | null> {
     try {
       logger.log(`getStaff呼び出し - ID: ${id}, 型: ${typeof id}, UUID有効: ${isUUID(id)}`);
-      
-      // スタッフデータを取得
-      const { data: staff, error: staffError } = await supabase
-        .from('staff')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
 
-      logger.log(`スタッフデータ取得結果:`, staff ? '成功' : '該当なし', staffError ? `エラー: ${staffError.message}` : 'エラーなし');
+      const resolved = resolveSecret(keys);
+      if (!resolved) {
+        logger.warn('シークレットが指定されていないため、スタッフを取得できません');
+        return null;
+      }
+
+      // スタッフデータを取得
+      const { data: staffRows, error: staffError } = await supabase.rpc('get_staff', {
+        p_secret: resolved.secret,
+        p_staff_id: id,
+        p_is_admin_key: resolved.isAdminKey,
+      });
+
+      logger.log(`スタッフデータ取得結果:`, staffRows?.length ? '成功' : '該当なし', staffError ? `エラー: ${staffError.message}` : 'エラーなし');
 
       if (staffError) throw staffError;
+      const staff = staffRows?.[0];
       if (!staff) {
         logger.log(`スタッフが見つかりません (ID: ${id})`);
         return null;
       }
 
       // シフト情報を取得
-      const { data: shiftsData, error: shiftsError } = await supabase
-        .from('shifts')
-        .select('*')
-        .eq('staff_id', id);
+      const { data: shiftsData, error: shiftsError } = await supabase.rpc('get_staff_shifts', {
+        p_secret: resolved.secret,
+        p_staff_id: id,
+        p_is_admin_key: resolved.isAdminKey,
+      });
 
       if (shiftsError) throw shiftsError;
 
@@ -154,42 +164,32 @@ export const staffService = {
     }
   },
 
-  // スタッフを追加
-  async addStaff(name: string, groupId?: string): Promise<ShiftData> {
+  // スタッフを追加（管理者キー必須）
+  async addStaff(name: string, groupId?: string, keys?: GroupSecretKeys): Promise<ShiftData> {
     try {
       logger.log('スタッフ追加開始:', { name, groupId });
-      
-      // IDを生成
-      const id = uuidv4();
-      
-      // スタッフデータを挿入
-      const { data, error } = await supabase
-        .from('staff')
-        .insert([{ 
-          id, 
-          name,
-          group_id: groupId,
-          user_id: null,  // 明示的にnullを設定
-          role: 'staff'
-        }])
-        .select()
-        .maybeSingle();
+
+      const { data, error } = await supabase.rpc('add_staff', {
+        p_admin_key: keys?.adminKey ?? '',
+        p_name: name,
+      });
 
       if (error) {
         logger.error('スタッフ追加中のSupabaseエラー:', error);
         throw error;
       }
-      
-      if (!data) {
+
+      const staff = data?.[0];
+      if (!staff) {
         logger.error('スタッフの追加に失敗: データが返されませんでした');
         throw new Error('スタッフの追加に失敗しました');
       }
 
-      logger.log('スタッフ追加成功:', data);
-      
+      logger.log('スタッフ追加成功:', staff);
+
       return {
-        staff_id: data.id,
-        name: data.name,
+        staff_id: staff.id,
+        name: staff.name,
         shifts: {}
       };
     } catch (error) {
@@ -198,24 +198,25 @@ export const staffService = {
     }
   },
 
-  // スタッフ情報を更新
-  async updateStaff(id: string, name: string): Promise<ShiftData> {
+  // スタッフ情報を更新（管理者キー必須）
+  async updateStaff(id: string, name: string, keys?: GroupSecretKeys): Promise<ShiftData> {
     try {
-      const { data, error } = await supabase
-        .from('staff')
-        .update({ name })
-        .eq('id', id)
-        .select()
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('update_staff_name', {
+        p_admin_key: keys?.adminKey ?? '',
+        p_staff_id: id,
+        p_name: name,
+      });
 
       if (error) throw error;
-      if (!data) throw new Error('スタッフの更新に失敗しました');
+      const staff = data?.[0];
+      if (!staff) throw new Error('スタッフの更新に失敗しました');
 
       // 現在のシフト情報を取得
-      const { data: shiftsData, error: shiftsError } = await supabase
-        .from('shifts')
-        .select('*')
-        .eq('staff_id', id);
+      const { data: shiftsData, error: shiftsError } = await supabase.rpc('get_staff_shifts', {
+        p_secret: keys?.adminKey ?? '',
+        p_staff_id: id,
+        p_is_admin_key: true,
+      });
 
       if (shiftsError) throw shiftsError;
 
@@ -233,8 +234,8 @@ export const staffService = {
       }
 
       return {
-        staff_id: data.id,
-        name: data.name,
+        staff_id: staff.id,
+        name: staff.name,
         shifts
       };
     } catch (error) {
@@ -243,22 +244,13 @@ export const staffService = {
     }
   },
 
-  // スタッフを削除
-  async deleteStaff(id: string): Promise<void> {
+  // スタッフを削除（管理者キー必須。関連するシフト情報も削除）
+  async deleteStaff(id: string, keys?: GroupSecretKeys): Promise<void> {
     try {
-      // 関連するシフト情報も削除
-      const { error: shiftsError } = await supabase
-        .from('shifts')
-        .delete()
-        .eq('staff_id', id);
-
-      if (shiftsError) throw shiftsError;
-
-      // スタッフを削除
-      const { error } = await supabase
-        .from('staff')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.rpc('delete_staff', {
+        p_admin_key: keys?.adminKey ?? '',
+        p_staff_id: id,
+      });
 
       if (error) throw error;
     } catch (error) {
@@ -276,23 +268,23 @@ export const shiftService = {
       logger.log(`getDates呼び出し: startDate=${startDate?.toISOString() || '未指定'}, days=${days}`);
       const dates: string[] = [];
       const start = startDate ? new Date(startDate) : new Date();
-      
+
       // タイムゾーンの問題を回避するため、日付のみに統一
       start.setHours(0, 0, 0, 0);
-      
+
       for (let i = 0; i < days; i++) {
         const date = new Date(start);
         date.setDate(start.getDate() + i);
-        
+
         // YYYY-MM-DD形式で保存（UTC問題を回避）
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
         const formattedDate = `${year}-${month}-${day}`;
-        
+
         dates.push(formattedDate);
       }
-      
+
       logger.log(`生成された日付一覧: ${JSON.stringify(dates)}`);
       return dates;
     } catch (error) {
@@ -337,24 +329,28 @@ export const shiftService = {
   },
 
   // 特定のスタッフの特定の日付のシフト情報を取得
-  async getShift(staffId: string, date: string): Promise<ShiftInfo | null> {
+  async getShift(staffId: string, date: string, keys?: GroupSecretKeys): Promise<ShiftInfo | null> {
     try {
-      const { data, error } = await supabase
-        .from('shifts')
-        .select('*')
-        .eq('staff_id', staffId)
-        .eq('date', date)
-        .maybeSingle();
+      const resolved = resolveSecret(keys);
+      if (!resolved) return null;
 
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116: 結果が見つからない
-      if (!data) return null;
+      const { data, error } = await supabase.rpc('get_shift', {
+        p_secret: resolved.secret,
+        p_staff_id: staffId,
+        p_date: date,
+        p_is_admin_key: resolved.isAdminKey,
+      });
 
-      const cleanNote = data.note ? data.note.trim() : '';
+      if (error) throw error;
+      const row = data?.[0];
+      if (!row) return null;
+
+      const cleanNote = row.note ? row.note.trim() : '';
 
       return {
-        startTime: data.start_time || '',
-        endTime: data.end_time || '',
-        isWorking: !data.is_off,
+        startTime: row.start_time || '',
+        endTime: row.end_time || '',
+        isWorking: !row.is_off,
         note: cleanNote
       } as ShiftInfo;
     } catch (error) {
@@ -364,54 +360,25 @@ export const shiftService = {
   },
 
   // シフト情報を更新または作成
-  async updateShift(shiftInfo: ShiftInfo): Promise<ShiftInfo | null> {
+  async updateShift(shiftInfo: ShiftInfo, keys?: GroupSecretKeys): Promise<ShiftInfo | null> {
     try {
       const { startTime, endTime, note, isWorking } = shiftInfo;
 
-      // まずはシフトが存在するか確認
-      const { data: existingShift, error: checkError } = await supabase
-        .from('shifts')
-        .select('*')
-        .eq('staff_id', shiftInfo.staff_id)
-        .eq('date', shiftInfo.date)
-        .maybeSingle();
-
-      if (checkError) {
-        logger.error('シフト確認エラー:', checkError);
-        throw checkError;
+      const resolved = resolveSecret(keys);
+      if (!resolved) {
+        throw new Error('シフトの更新にはアクセスキーが必要です');
       }
 
-      let error;
-      if (existingShift) {
-        // 既存のシフトがある場合は更新
-        const { error: updateError } = await supabase
-          .from('shifts')
-          .update({
-            start_time: startTime,
-            end_time: endTime,
-            note,
-            is_off: !isWorking
-          })
-          .eq('staff_id', shiftInfo.staff_id)
-          .eq('date', shiftInfo.date);
-        
-        error = updateError;
-      } else {
-        // 新規シフトの場合は挿入
-        const { error: insertError } = await supabase
-          .from('shifts')
-          .insert({
-            id: uuidv4(),
-            staff_id: shiftInfo.staff_id,
-            date: shiftInfo.date,
-            start_time: startTime,
-            end_time: endTime,
-            note,
-            is_off: !isWorking
-          });
-        
-        error = insertError;
-      }
+      const { error } = await supabase.rpc('upsert_shift', {
+        p_secret: resolved.secret,
+        p_staff_id: shiftInfo.staff_id,
+        p_date: shiftInfo.date,
+        p_start_time: startTime ?? '',
+        p_end_time: endTime ?? '',
+        p_is_off: !isWorking,
+        p_note: note ?? '',
+        p_is_admin_key: resolved.isAdminKey,
+      });
 
       if (error) {
         logger.error('シフト更新エラー:', error);
@@ -426,13 +393,19 @@ export const shiftService = {
   },
 
   // シフト情報を削除
-  async deleteShift(staffId: string, date: string): Promise<void> {
+  async deleteShift(staffId: string, date: string, keys?: GroupSecretKeys): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('shifts')
-        .delete()
-        .eq('staff_id', staffId)
-        .eq('date', date);
+      const resolved = resolveSecret(keys);
+      if (!resolved) {
+        throw new Error('シフトの削除にはアクセスキーが必要です');
+      }
+
+      const { error } = await supabase.rpc('delete_shift', {
+        p_secret: resolved.secret,
+        p_staff_id: staffId,
+        p_date: date,
+        p_is_admin_key: resolved.isAdminKey,
+      });
 
       if (error) throw error;
     } catch (error) {
@@ -442,14 +415,21 @@ export const shiftService = {
   },
 
   // 特定のスタッフの全シフトを取得
-  async getStaffShifts(staffId: string): Promise<Record<string, ShiftInfo>> {
+  async getStaffShifts(staffId: string, keys?: GroupSecretKeys): Promise<Record<string, ShiftInfo>> {
     try {
       logger.log(`スタッフID: ${staffId}のシフトデータを取得します`);
-      
-      const { data, error } = await supabase
-        .from('shifts')
-        .select('*')
-        .eq('staff_id', staffId);
+
+      const resolved = resolveSecret(keys);
+      if (!resolved) {
+        logger.warn('シークレットが指定されていないため、シフトデータを取得できません');
+        return {};
+      }
+
+      const { data, error } = await supabase.rpc('get_staff_shifts', {
+        p_secret: resolved.secret,
+        p_staff_id: staffId,
+        p_is_admin_key: resolved.isAdminKey,
+      });
 
       if (error) {
         logger.error('シフトデータ取得エラー:', error);
@@ -462,7 +442,7 @@ export const shiftService = {
         logger.log(`取得したシフト数: ${data.length}`);
         data.forEach((shift) => {
           const cleanNote = shift.note ? shift.note.trim() : '';
-          
+
           shiftsRecord[shift.date] = {
             staff_id: staffId,
             date: shift.date,
@@ -492,38 +472,23 @@ export const shiftService = {
   ): Promise<boolean> {
     try {
       logger.log(`スタッフID: ${staffId}の全シフトを${isWorking ? '勤務可能' : '休み'}に設定します`);
-      
-      // staffIdを持つスタッフがどのグループに所属しているか確認
-      const { data: staffData, error: staffError } = await supabase
-        .from('staff')
-        .select('group_id')
-        .eq('id', staffId)
-        .maybeSingle();
-        
-      if (staffError) {
-        logger.error('スタッフデータの取得に失敗しました:', staffError);
-        throw staffError;
+
+      const resolved = resolveSecret(groupKeys);
+      if (!resolved) {
+        throw new Error('シフトの一括更新にはアクセスキーが必要です');
       }
-      
-      if (!staffData || !staffData.group_id) {
-        logger.error('スタッフがグループに所属していないか、データの取得に失敗しました');
-        throw new Error('スタッフデータの取得に失敗しました');
-      }
-      
-      const groupId = staffData.group_id;
-      logger.log(`スタッフのグループID: ${groupId}`);
-      
+
       let dates: string[] = [];
-      
+
       // 特定の日付が指定されている場合はそれを使用
       if (specificDates && specificDates.length > 0) {
         dates = specificDates;
         logger.log('指定された日付で更新を実行:', dates);
-      } 
+      }
       // 指定がない場合はグループの日付範囲を取得
       else {
         try {
-          const dateRange = await this.getDateRange(groupId, groupKeys);
+          const dateRange = await this.getDateRange('', groupKeys);
           if (dateRange) {
             const { startDate, days } = dateRange;
             dates = await this.getDates(new Date(startDate), days);
@@ -538,98 +503,50 @@ export const shiftService = {
           logger.log('エラーのためデフォルトの日付範囲を使用');
         }
       }
-      
+
       logger.log(`更新対象の日付数: ${dates.length}日間, 対象日: ${JSON.stringify(dates)}`);
-      
+
       // 一度に処理する最大数を増やす
       const BATCH_SIZE = 14; // 全ての日程（通常14日）を一度に処理
       let success = true;
-      
+
       // バッチ処理でシフトを更新
       for (let i = 0; i < dates.length; i += BATCH_SIZE) {
         const batch = dates.slice(i, i + BATCH_SIZE);
         logger.log(`バッチ処理: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目, 日付: ${JSON.stringify(batch)}`);
-        
+
         // 現在のバッチの処理を並列実行
         const batchPromises = batch.map(async (date) => {
           try {
-            // 既存のシフトがあるか確認
-            const { data: existingShift, error: checkError } = await supabase
-              .from('shifts')
-              .select('*')
-              .eq('staff_id', staffId)
-              .eq('date', date)
-              .maybeSingle();
-              
-            if (checkError) {
-              logger.error(`日付: ${date}のシフト確認エラー:`, checkError);
-              return false;
-            }
-            
             const startTime = '09:00';
             const endTime = '22:00';
-            let note = '';
-            
-            // 既存のシフトがある場合
-            if (existingShift) {
-              logger.log(`既存シフト更新: ${date}, is_off=${!isWorking}`);
-              
-              // メモ情報は引き継ぐ
-              note = existingShift.note || note;
-              
-              // 全日勤務 or 休みのどちらの場合も、時間は標準設定（09:00-22:00）にする
-              // これにより一貫性が保たれ、全日勤務→休み→全日勤務のような切り替えでも問題なくなる
-              
-              // 更新
-              const { data: updateData, error: updateError } = await supabase
-                .from('shifts')
-                .update({
-                  start_time: startTime,
-                  end_time: endTime,
-                  note,
-                  is_off: !isWorking
-                })
-                .eq('staff_id', staffId)
-                .eq('date', date)
-                .select();
-                
-              if (updateError) {
-                logger.error(`日付: ${date}のシフト更新エラー:`, updateError);
-                return false;
-              }
-              
-              logger.log(`シフト更新完了: ${date}, 結果:`, updateData ? '成功' : '不明');
-            } else {
-              logger.log(`新規シフト作成: ${date}, is_off=${!isWorking}`);
-              // 新規作成
-              const { data: insertData, error: insertError } = await supabase
-                .from('shifts')
-                .insert({
-                  id: uuidv4(),
-                  staff_id: staffId,
-                  date,
-                  start_time: startTime,
-                  end_time: endTime,
-                  note,
-                  is_off: !isWorking
-                })
-                .select();
-                
-              if (insertError) {
-                logger.error(`日付: ${date}のシフト作成エラー:`, insertError);
-                return false;
-              }
-              
-              logger.log(`シフト作成完了: ${date}, 結果:`, insertData ? '成功' : '不明');
+
+            // 既存の note があれば維持、なければ空文字（upsert_shift 側で解決）
+            const { error } = await supabase.rpc('upsert_shift', {
+              p_secret: resolved.secret,
+              p_staff_id: staffId,
+              p_date: date,
+              p_start_time: startTime,
+              p_end_time: endTime,
+              p_is_off: !isWorking,
+              p_note: '',
+              p_is_admin_key: resolved.isAdminKey,
+              p_preserve_existing_note: true,
+            });
+
+            if (error) {
+              logger.error(`日付: ${date}のシフト更新エラー:`, error);
+              return false;
             }
-            
+
+            logger.log(`シフト更新完了: ${date}, is_off=${!isWorking}`);
             return true;
           } catch (error) {
             logger.error(`日付: ${date}の処理でエラー:`, error);
             return false;
           }
         });
-        
+
         // バッチ処理の結果を確認
         const batchResults = await Promise.all(batchPromises);
         const batchSuccess = batchResults.every(result => result === true);
@@ -641,11 +558,11 @@ export const shiftService = {
         } else {
           logger.log(`バッチ処理成功: ${i+1}～${Math.min(i+BATCH_SIZE, dates.length)}日目`);
         }
-        
+
         // 次のバッチ処理の前に少し待機（レート制限対策）
         await new Promise(resolve => setTimeout(resolve, 300));
       }
-      
+
       logger.log(`全シフト更新処理完了. 結果: ${success ? '成功' : '一部失敗'}`);
       return success;
     } catch (error) {
@@ -654,40 +571,31 @@ export const shiftService = {
     }
   },
 
-  // 6週間以上前のシフトデータを削除
-  cleanupOldShifts: async () => {
+  // 6週間以上前のシフトデータを削除（管理者キー必須。自グループのみ対象）
+  cleanupOldShifts: async (keys?: GroupSecretKeys) => {
     try {
-      const sixWeeksAgo = new Date();
-      sixWeeksAgo.setDate(sixWeeksAgo.getDate() - 42); // 6週間 = 42日
-      const cutoffDate = sixWeeksAgo.toISOString().split('T')[0];
-
-      // まず削除対象のデータ数を確認
-      const { data: oldShifts, error: countError } = await supabase
-        .from('shifts')
-        .select('id')
-        .lt('date', cutoffDate);
-
-      if (countError) throw countError;
-
-      if (!oldShifts || oldShifts.length === 0) {
-        return { success: true, message: '削除対象の古いシフトデータはありませんでした' };
+      if (!keys?.adminKey) {
+        return {
+          success: false,
+          error: '管理者キーが必要です',
+          message: '管理者キーがないため古いシフトデータを削除できません'
+        };
       }
 
-      const { error: deleteError } = await supabase
-        .from('shifts')
-        .delete()
-        .lt('date', cutoffDate);
+      const { data, error } = await supabase.rpc('cleanup_old_shifts', {
+        p_admin_key: keys.adminKey,
+      });
 
-      if (deleteError) throw deleteError;
+      if (error) throw error;
 
-      return { 
-        success: true, 
-        message: `${oldShifts.length}件の古いシフトデータを削除しました` 
+      return {
+        success: true,
+        message: `${data ?? 0}件の古いシフトデータを削除しました`
       };
     } catch (error) {
       logger.error('Error cleaning up old shifts:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: '古いシフトデータの削除に失敗しました',
         message: error instanceof Error ? error.message : '不明なエラーが発生しました'
       };
@@ -695,19 +603,24 @@ export const shiftService = {
   },
 
   // シフト確定状態を取得
-  async getShiftConfirmation(staffId: string): Promise<{ success: boolean; data?: { isConfirmed: boolean }; error?: string }> {
+  async getShiftConfirmation(staffId: string, keys?: GroupSecretKeys): Promise<{ success: boolean; data?: { isConfirmed: boolean }; error?: string }> {
     try {
-      const { data, error } = await supabase
-        .from('staff')
-        .select('is_shift_confirmed')
-        .eq('id', staffId)
-        .maybeSingle();
+      const resolved = resolveSecret(keys);
+      if (!resolved) {
+        return { success: false, error: 'アクセスキーが必要です' };
+      }
+
+      const { data, error } = await supabase.rpc('get_shift_confirmation', {
+        p_secret: resolved.secret,
+        p_staff_id: staffId,
+        p_is_admin_key: resolved.isAdminKey,
+      });
 
       if (error) throw error;
 
       return {
         success: true,
-        data: { isConfirmed: data?.is_shift_confirmed ?? false }
+        data: { isConfirmed: data ?? false }
       };
     } catch (error) {
       logger.error('シフト確定状態の取得に失敗しました:', error);
@@ -716,20 +629,28 @@ export const shiftService = {
   },
 
   // シフトを確定
-  async confirmShift(staffId: string): Promise<{ success: boolean; data?: { isConfirmed: boolean }; error?: string }> {
+  async confirmShift(staffId: string, keys?: GroupSecretKeys): Promise<{ success: boolean; data?: { isConfirmed: boolean }; error?: string }> {
     try {
-      const { data, error } = await supabase
-        .from('staff')
-        .update({ is_shift_confirmed: true })
-        .eq('id', staffId)
-        .select()
-        .maybeSingle();
+      const resolved = resolveSecret(keys);
+      if (!resolved) {
+        return { success: false, error: 'アクセスキーが必要です' };
+      }
+
+      const { data, error } = await supabase.rpc('set_shift_confirmation', {
+        p_secret: resolved.secret,
+        p_staff_id: staffId,
+        p_confirmed: true,
+        p_is_admin_key: resolved.isAdminKey,
+      });
 
       if (error) throw error;
+      if (data !== true) {
+        return { success: false, error: 'シフト確定に失敗しました' };
+      }
 
       return {
         success: true,
-        data: { isConfirmed: data?.is_shift_confirmed ?? true }
+        data: { isConfirmed: true }
       };
     } catch (error) {
       logger.error('シフト確定に失敗しました:', error);
@@ -738,24 +659,32 @@ export const shiftService = {
   },
 
   // シフト確定を解除
-  async unconfirmShift(staffId: string): Promise<{ success: boolean; data?: { isConfirmed: boolean }; error?: string }> {
+  async unconfirmShift(staffId: string, keys?: GroupSecretKeys): Promise<{ success: boolean; data?: { isConfirmed: boolean }; error?: string }> {
     try {
-      const { data, error } = await supabase
-        .from('staff')
-        .update({ is_shift_confirmed: false })
-        .eq('id', staffId)
-        .select()
-        .maybeSingle();
+      const resolved = resolveSecret(keys);
+      if (!resolved) {
+        return { success: false, error: 'アクセスキーが必要です' };
+      }
+
+      const { data, error } = await supabase.rpc('set_shift_confirmation', {
+        p_secret: resolved.secret,
+        p_staff_id: staffId,
+        p_confirmed: false,
+        p_is_admin_key: resolved.isAdminKey,
+      });
 
       if (error) throw error;
+      if (data !== true) {
+        return { success: false, error: 'シフト確定解除に失敗しました' };
+      }
 
       return {
         success: true,
-        data: { isConfirmed: data?.is_shift_confirmed ?? false }
+        data: { isConfirmed: false }
       };
     } catch (error) {
       logger.error('シフト確定解除に失敗しました:', error);
       return { success: false, error: 'シフト確定解除に失敗しました' };
     }
   },
-}; 
+};
