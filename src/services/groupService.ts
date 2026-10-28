@@ -2,20 +2,17 @@ import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { Group, GroupAccess } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { generateRandomString } from '@/utils/helpers';
 
 export const groupService = {
   async createGroup(name: string): Promise<Group> {
     try {
       const id = uuidv4();
-      const accessKey = generateRandomString(16);
-      const adminKey = generateRandomString(16);
-
       const { data, error } = await supabase.rpc('create_group', {
         p_id: id,
         p_name: name,
-        p_access_key: accessKey,
-        p_admin_key: adminKey,
+        // The server generates these keys; client-supplied keys are ignored.
+        p_access_key: '',
+        p_admin_key: '',
         p_admin_password: '',
       });
 

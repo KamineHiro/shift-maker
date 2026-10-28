@@ -16,7 +16,14 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   },
   global: {
     fetch: (...args) => {
-      return fetch(...args).catch(err => {
+      const [input, init] = args;
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const path = new URL(url).pathname;
+      const prefix = '/rest/v1/rpc/';
+      if (!path.startsWith(prefix)) {
+        return Promise.reject(new Error('Unsupported Supabase request'));
+      }
+      return fetch(`/api/rpc/${path.slice(prefix.length)}`, init).catch(err => {
         logger.error('Supabaseリクエストエラー:', err);
         throw err;
       });
