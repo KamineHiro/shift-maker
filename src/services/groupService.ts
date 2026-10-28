@@ -8,8 +8,8 @@ export const groupService = {
   async createGroup(name: string): Promise<Group> {
     try {
       const id = uuidv4();
-      const accessKey = generateRandomString(8);
-      const adminKey = generateRandomString(8);
+      const accessKey = generateRandomString(16);
+      const adminKey = generateRandomString(16);
 
       const { data, error } = await supabase.rpc('create_group', {
         p_id: id,
