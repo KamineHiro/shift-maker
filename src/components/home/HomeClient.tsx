@@ -96,7 +96,7 @@ export default function HomeClient({ header, footer }: HomeClientProps) {
       logger.log('グループ作成開始:', { name: groupName.trim() });
 
       const adminKeyResult = await createGroup(groupName.trim());
-      logger.log('グループ作成成功:', { adminKey: adminKeyResult });
+      logger.log('グループ作成成功');
 
       setCreatedAdminKey(adminKeyResult);
     } catch (err) {
