@@ -23,6 +23,13 @@ interface GroupContextType {
 
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
 
+function accessErrorMessage(error: unknown, keyName: string): string {
+  const code = (error as { code?: string } | null)?.code;
+  if (code === 'RATE_LIMITED') return '試行回数が多すぎます。時間をおいて再試行してください';
+  if (code === 'INVALID_SECRET') return `無効な${keyName}です`;
+  return '接続できませんでした。時間をおいて再試行してください';
+}
+
 export const useGroup = () => {
   const context = useContext(GroupContext);
   if (context === undefined) {
@@ -71,9 +78,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       router.push('/group');
     } catch (err) {
       logger.error('グループへのアクセスに失敗しました:', err);
-      setError((err as { code?: string })?.code === 'RATE_LIMITED'
-        ? '試行回数が多すぎます。時間をおいて再試行してください'
-        : '無効なアクセスキーです');
+      setError(accessErrorMessage(err, 'アクセスキー'));
       throw err;
     } finally {
       setLoading(false);
@@ -103,9 +108,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       router.push('/admin');
     } catch (err) {
       logger.error('管理者グループへのアクセスに失敗しました:', err);
-      setError((err as { code?: string })?.code === 'RATE_LIMITED'
-        ? '試行回数が多すぎます。時間をおいて再試行してください'
-        : '無効な管理者キーです');
+      setError(accessErrorMessage(err, '管理者キー'));
       throw err;
     } finally {
       setLoading(false);
