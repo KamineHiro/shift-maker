@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS shift_maker_security.secret_attempts (
   failures integer NOT NULL,
   window_started_at timestamptz NOT NULL
 );
+ALTER TABLE shift_maker_security.secret_attempts ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS secret_attempts_window_started_at_idx
   ON shift_maker_security.secret_attempts (window_started_at);
 REVOKE ALL ON TABLE shift_maker_security.secret_attempts FROM PUBLIC, anon, authenticated;
