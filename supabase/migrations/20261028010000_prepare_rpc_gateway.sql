@@ -1,16 +1,16 @@
 -- The gateway calls this function using a server-only service key. Each call is
 -- a separate transaction, so a later RPC error cannot roll back an attempt.
-CREATE SCHEMA IF NOT EXISTS private;
-REVOKE ALL ON SCHEMA private FROM PUBLIC, anon, authenticated;
+CREATE SCHEMA IF NOT EXISTS shift_maker_security;
+REVOKE ALL ON SCHEMA shift_maker_security FROM PUBLIC, anon, authenticated;
 
-CREATE TABLE IF NOT EXISTS private.secret_attempts (
+CREATE TABLE IF NOT EXISTS shift_maker_security.secret_attempts (
   ip_hash text PRIMARY KEY,
   failures integer NOT NULL,
   window_started_at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS secret_attempts_window_started_at_idx
-  ON private.secret_attempts (window_started_at);
-REVOKE ALL ON TABLE private.secret_attempts FROM PUBLIC, anon, authenticated;
+  ON shift_maker_security.secret_attempts (window_started_at);
+REVOKE ALL ON TABLE shift_maker_security.secret_attempts FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.gateway_check_secret(
   p_ip_hash text,
@@ -19,10 +19,10 @@ CREATE OR REPLACE FUNCTION public.gateway_check_secret(
 )
 RETURNS text
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-SET search_path = pg_catalog, public, private
+SET search_path = pg_catalog, public, shift_maker_security
 AS $$
 DECLARE
-  v_attempt private.secret_attempts%ROWTYPE;
+  v_attempt shift_maker_security.secret_attempts%ROWTYPE;
   v_valid boolean;
 BEGIN
   IF p_ip_hash IS NULL OR p_ip_hash !~ '^[0-9a-f]{64}$' THEN
@@ -31,7 +31,7 @@ BEGIN
 
   -- Serialize checks from the same IP, including concurrent failed requests.
   PERFORM pg_advisory_xact_lock(hashtextextended(p_ip_hash, 0));
-  SELECT * INTO v_attempt FROM private.secret_attempts WHERE ip_hash = p_ip_hash;
+  SELECT * INTO v_attempt FROM shift_maker_security.secret_attempts WHERE ip_hash = p_ip_hash;
   IF FOUND AND v_attempt.window_started_at > clock_timestamp() - interval '15 minutes'
       AND v_attempt.failures >= 10 THEN
     RETURN 'locked';
@@ -46,7 +46,7 @@ BEGIN
     RETURN 'valid';
   END IF;
 
-  INSERT INTO private.secret_attempts (ip_hash, failures, window_started_at)
+  INSERT INTO shift_maker_security.secret_attempts (ip_hash, failures, window_started_at)
   VALUES (p_ip_hash, 1, clock_timestamp())
   ON CONFLICT (ip_hash) DO UPDATE SET
     failures = CASE WHEN secret_attempts.window_started_at <= clock_timestamp() - interval '15 minutes'
@@ -56,8 +56,8 @@ BEGIN
 
   -- Bound cleanup work and retain no expired rows indefinitely under traffic.
   IF random() < 0.01 THEN
-    DELETE FROM private.secret_attempts WHERE ip_hash IN (
-      SELECT ip_hash FROM private.secret_attempts
+    DELETE FROM shift_maker_security.secret_attempts WHERE ip_hash IN (
+      SELECT ip_hash FROM shift_maker_security.secret_attempts
       WHERE window_started_at < clock_timestamp() - interval '1 day'
       ORDER BY window_started_at LIMIT 50
     );

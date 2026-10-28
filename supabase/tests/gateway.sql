@@ -29,7 +29,7 @@ BEGIN
      OR public.gateway_check_secret(ip_b, 'testAccessKey123', false) <> 'valid' THEN
     RAISE EXCEPTION 'lockout or IP isolation failed';
   END IF;
-  UPDATE private.secret_attempts SET window_started_at = clock_timestamp() - interval '16 minutes'
+  UPDATE shift_maker_security.secret_attempts SET window_started_at = clock_timestamp() - interval '16 minutes'
     WHERE ip_hash = ip_a;
   IF public.gateway_check_secret(ip_a, 'testAccessKey123', false) <> 'valid' THEN
     RAISE EXCEPTION 'lock did not expire';
